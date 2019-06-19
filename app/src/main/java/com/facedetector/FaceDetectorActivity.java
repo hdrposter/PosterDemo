@@ -40,6 +40,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.facedetector.customview.DrawFacesView;
+import com.facedetector.customview.FocusCircleView;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -64,6 +65,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private Camera mCamera;
     private SurfaceHolder mHolder;
     private DrawFacesView facesView;
+    private FocusCircleView focusView;
     private ImageButton imageButton;
     private String mPath;
     private boolean isTakingPic;
@@ -172,6 +174,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private void initViews() {
         surfaceView = (SurfaceView)this.findViewById(R.id.surfaceView);
         facesView = new DrawFacesView(this);
+        focusView=new FocusCircleView(this);
+        addContentView(focusView,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
         addContentView(facesView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         imageButton=(ImageButton)this.findViewById(R.id.imageButton);
         imageButton.setOnClickListener(new View.OnClickListener() {
@@ -186,6 +190,10 @@ public class FaceDetectorActivity extends AppCompatActivity {
                 float x=event.getX();
                 float y=event.getY();
                 setFocusArea(x,y);
+                if (focusView!=null){
+                    focusView.myViewScaleAnimation(focusView);
+                    focusView.setPoint(x,y);
+                }
                 return true;
             }
         });
@@ -193,7 +201,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     //设置特定的对焦、曝光区域
     private void setFocusArea(float x,float y){
-        Rect focusRect=calculateTapArea(x,y,1f);
+        Rect focusRect=calculateTapArea(x,y,0.33333f);
         Log.d(TAG, "onTouch: left: "+focusRect.left+", right: "+focusRect.right+", top: "+focusRect.top+", bottom: "+focusRect.bottom+", centerX: "+focusRect.centerX()+", centerY: "+focusRect.centerY());
         Rect meteringRect=calculateTapArea(x,y,1f);
         List<Camera.Area>mFocusList=new ArrayList<>();
@@ -201,7 +209,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         List<Camera.Area>mMeteringList=new ArrayList<>();
         mMeteringList.add(new Camera.Area(meteringRect,1000));
         Camera.Parameters parameters=mCamera.getParameters();
-        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         mCamera.cancelAutoFocus();
         if (parameters.getMaxNumFocusAreas()>0){
             parameters.setFocusAreas(mFocusList);
@@ -210,11 +218,19 @@ public class FaceDetectorActivity extends AppCompatActivity {
             parameters.setMeteringAreas(mMeteringList);
         }
         mCamera.setParameters(parameters);
+        mCamera.autoFocus(new Camera.AutoFocusCallback() {
+            @Override
+            public void onAutoFocus(boolean success, Camera camera) {
+                if (success){
+                    Log.d(TAG, "onAutoFocus: auto focus success!");
+                }
+            }
+        });
     }
 
     //计算对应的聚焦和曝光区域
     private Rect calculateTapArea(float x, float y, float v) {
-        int FOCUS_AREA_SIZE=100;
+        int FOCUS_AREA_SIZE=300;
         int areaSize=Float.valueOf(FOCUS_AREA_SIZE*v).intValue();
         //Rect rect=new Rect((int)x-areaSize,(int)y-areaSize,(int)x+areaSize,(int)y+areaSize);
         /*Paint paint = new Paint();
