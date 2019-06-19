@@ -48,12 +48,12 @@ public class DrawFacesView extends View {
         for (Camera.Face face : faces) {
             if (face == null) break;
             canvas.drawRect(face.rect, paint);
-            if (face.leftEye != null)
+            /*if (face.leftEye != null)
                 canvas.drawPoint(face.leftEye.x, face.leftEye.y, paint);
             if (face.rightEye != null)
                 canvas.drawPoint(face.rightEye.x, face.rightEye.y, paint);
             if (face.mouth != null)
-                canvas.drawPoint(face.mouth.x, face.mouth.y, paint);
+                canvas.drawPoint(face.mouth.x, face.mouth.y, paint);*/
             // 因为旋转了画布矩阵，所以字体也跟着旋转
 //            canvas.drawText(String.valueOf("id:" + face.id + "\n置信度:" + face.score), face.rect.left, face.rect.bottom + 10, paint);
         }
