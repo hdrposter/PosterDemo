@@ -1,4 +1,4 @@
-package com.facedetector.customview;
+package com.smil.postercamera_demo.customview;
 
 import android.content.Context;
 import android.graphics.Canvas;

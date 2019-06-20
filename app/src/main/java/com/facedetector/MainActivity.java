@@ -1,4 +1,4 @@
-package com.facedetector;
+package com.smil.postercamera_demo;
 
 import android.Manifest;
 import android.content.ContentProvider;
@@ -24,7 +24,7 @@ import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
-import com.facedetector.util.FaceSDK;
+import com.smil.postercamera_demo.util.FaceSDK;
 
 import java.lang.ref.WeakReference;
 
