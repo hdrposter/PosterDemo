@@ -1,10 +1,8 @@
 package com.facedetector;
 
 import android.Manifest;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.os.Environment;
+import android.os.SystemClock;
 
 import java.io.File;
 
@@ -15,15 +13,11 @@ import java.text.SimpleDateFormat;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -47,6 +41,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Timer;
 
 /**
  * <pre>
@@ -67,10 +62,11 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private DrawFacesView facesView;
     private FocusCircleView focusView;
     private ImageButton imageButton;
+    private int exposure;
+    private String iso;
     private String mPath;
     private boolean isTakingPic;
-    private ArrayList<byte[]> faceImages;
-    private ArrayList<byte[]>pptImages;
+    private ArrayList<byte[]> images;
 
     public static void start(Context context) {
         Intent intent = new Intent(context, FaceDetectorActivity.class);
@@ -85,8 +81,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
         setContentView(R.layout.activity_face);
-        faceImages=new ArrayList<>();
-        pptImages=new ArrayList<>();
+        images=new ArrayList<>();
         isTakingPic=false;
         mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
         initViews();
@@ -122,7 +117,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     try {
                         mCamera.setFaceDetectionListener(new FaceDetectorListener());
                         mCamera.setPreviewDisplay(holder);
-                        startFaceDetection();
+                        //startFaceDetection();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -152,7 +147,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     setCameraParms(mCamera, measuredWidth, measuredHeight);
                     mCamera.startPreview();
 
-                    startFaceDetection(); // re-start face detection feature
+                    //startFaceDetection(); // re-start face detection feature
 
                 } catch (Exception e) {
                     // ignore: tried to stop a non-existent preview
@@ -208,7 +203,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         mFocusList.add(new Camera.Area(focusRect,1000));
         List<Camera.Area>mMeteringList=new ArrayList<>();
         mMeteringList.add(new Camera.Area(meteringRect,1000));
-        Camera.Parameters parameters=mCamera.getParameters();
+        final Camera.Parameters parameters=mCamera.getParameters();
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         mCamera.cancelAutoFocus();
         if (parameters.getMaxNumFocusAreas()>0){
@@ -222,13 +217,48 @@ public class FaceDetectorActivity extends AppCompatActivity {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
                 if (success){
+                    takeExposurePic(parameters.getMinExposureCompensation());
                     Log.d(TAG, "onAutoFocus: auto focus success!");
                 }
             }
         });
     }
 
-    //计算对应的聚焦和曝光区域
+    /**
+     * 拍摄多张不同曝光度照片
+     */
+    private void takeExposurePic(final int exposure) {
+        final Camera.Parameters parameters=mCamera.getParameters();
+        final int maxExposure=parameters.getMaxExposureCompensation();
+        final int minExposure=parameters.getMinExposureCompensation();
+        parameters.setExposureCompensation(exposure);
+        mCamera.setParameters(parameters);
+        mCamera.takePicture(null, null, new Camera.PictureCallback() {
+            @Override
+            public void onPictureTaken(byte[] data, Camera camera) {
+                if (data.length>0){
+                    images.add(data);
+                    Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
+                    while (images.size()>10){
+                        Log.d(TAG, "onPictureTaken: 多于5张了，移除之前的");
+                        images.remove(images.size()-1);
+                    }
+                }
+                mCamera.startPreview();
+                if (exposure<maxExposure){
+                    int nextExposure=exposure+(maxExposure-minExposure)/4;
+                    takeExposurePic(nextExposure);
+                }
+            }
+        });
+    }
+
+    /****
+     * 计算对应的聚焦和曝光区域
+     * @param x
+     * @param y 聚焦中心坐标
+     * @param v 区域缩放系数
+     */
     private Rect calculateTapArea(float x, float y, float v) {
         int FOCUS_AREA_SIZE=300;
         int areaSize=Float.valueOf(FOCUS_AREA_SIZE*v).intValue();
@@ -264,12 +294,12 @@ public class FaceDetectorActivity extends AppCompatActivity {
             Log.d(TAG, "onClick: 已创建文件夹");
         }
         Log.d(TAG, "onClick: 文件夹已创建："+dir.exists());
-        for (int i=0;i<faceImages.size();i++){
-            fileName=fileName+"IMG_Face_";
+        for (int i=0;i<images.size();i++){
+            fileName=fileName+"IMG_";
             String timeStamp=(new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date());
             fileName=fileName+timeStamp+i+".jpg";
             Log.d(TAG, "onClick: 文件名："+fileName);
-            Log.d(TAG, "onClick: 保存第 "+(i+1)+"/"+faceImages.size()+" 张图片");
+            Log.d(TAG, "onClick: 保存第 "+(i+1)+"/"+images.size()+" 张图片");
             try {
                 File imageFile=new File(fileName);
                 if (!imageFile.exists()) {
@@ -279,7 +309,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     Log.d(TAG, "saveFaceImages: "+fileName+"创建成功");
                 }
                 BufferedSink bs=Okio.buffer(Okio.sink(imageFile));
-                bs.write(faceImages.get(i));
+                bs.write(images.get(i));
                 Log.d(TAG, "onClick: 保存路径："+fileName);
                 bs.close();
             } catch (FileNotFoundException e) {
@@ -339,16 +369,14 @@ public class FaceDetectorActivity extends AppCompatActivity {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
                 if (data.length>0){
-                   faceImages.add(data);
-                    Log.d(TAG, "onPictureTaken: 已添加 "+faceImages.size()+" 张脸部图片");
-                    while (faceImages.size()>5){
+                   images.add(data);
+                    Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
+                    while (images.size()>5){
                         Log.d(TAG, "onPictureTaken: 多于5张了，移除之前的");
-                        faceImages.remove(faceImages.size()-1);
+                        images.remove(images.size()-1);
                     }
                 }
                 mCamera.startPreview();
-                startFaceDetection();
-                isTakingPic=false;
             }
         });
     }
