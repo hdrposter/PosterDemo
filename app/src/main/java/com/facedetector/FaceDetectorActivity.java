@@ -10,10 +10,8 @@ import java.io.File;
 
 import okio.BufferedSink;
 import okio.Okio;
-
 import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
-
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -47,7 +45,6 @@ import com.facedetector.customview.FocusCircleView;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -72,7 +69,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private ImageButton imageButton;
     private String mPath;
     private boolean isTakingPic;
-    private ArrayList<byte[]> images;
+    private ArrayList<byte[]> faceImages;
+    private ArrayList<byte[]>pptImages;
 
     public static void start(Context context) {
         Intent intent = new Intent(context, FaceDetectorActivity.class);
@@ -87,9 +85,10 @@ public class FaceDetectorActivity extends AppCompatActivity {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
         setContentView(R.layout.activity_face);
-        images = new ArrayList<>();
-        isTakingPic = false;
-        mPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Poster_Camera" + File.separator;
+        faceImages=new ArrayList<>();
+        pptImages=new ArrayList<>();
+        isTakingPic=false;
+        mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
         initViews();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
@@ -123,7 +122,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     try {
                         mCamera.setFaceDetectionListener(new FaceDetectorListener());
                         mCamera.setPreviewDisplay(holder);
-                        //startFaceDetection();
+                        startFaceDetection();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -153,7 +152,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     setCameraParms(mCamera, measuredWidth, measuredHeight);
                     mCamera.startPreview();
 
-                    //startFaceDetection(); // re-start face detection feature
+                    startFaceDetection(); // re-start face detection feature
 
                 } catch (Exception e) {
                     // ignore: tried to stop a non-existent preview
@@ -173,36 +172,27 @@ public class FaceDetectorActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        surfaceView = (SurfaceView) this.findViewById(R.id.surfaceView);
+        surfaceView = (SurfaceView)this.findViewById(R.id.surfaceView);
         facesView = new DrawFacesView(this);
-        focusView = new FocusCircleView(this);
-        addContentView(focusView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        focusView=new FocusCircleView(this);
+        addContentView(focusView,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
         addContentView(facesView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        imageButton = (ImageButton) this.findViewById(R.id.imageButton);
+        imageButton=(ImageButton)this.findViewById(R.id.imageButton);
         imageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveImages();
+                saveFaceImages();
             }
         });
-        final List<Float> xList = new ArrayList<>();
-        final List<Float> yList = new ArrayList<>();
         surfaceView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                float x = event.getX();
-                float y = event.getY();
-                xList.add(x);
-                yList.add(y);
-                Log.d(TAG, "onTouch: x_list size: " + xList.size());
-                if (xList.size() > 2) {
-                    xList.remove(0);
-                    yList.remove(0);
-                }
-                setFocusArea(xList, yList);
-                if (focusView != null) {
+                float x=event.getX();
+                float y=event.getY();
+                setFocusArea(x,y);
+                if (focusView!=null){
                     focusView.myViewScaleAnimation(focusView);
-                    focusView.setPoint(x, y);
+                    focusView.setPoint(x,y);
                 }
                 return true;
             }
@@ -210,44 +200,28 @@ public class FaceDetectorActivity extends AppCompatActivity {
     }
 
     //设置特定的对焦、曝光区域
-    private void setFocusArea(List<Float> x_list, List<Float> y_list) {
-        Rect focusRect;
-        Rect meteringRect;
-        for (int i = 0; i < x_list.size(); i++) {
-            float x = x_list.get(i);
-            float y = y_list.get(i);
-            focusRect = calculateTapArea(x, y, 0.6666666666f);
-            Log.d(TAG, "focusRect: left: " + focusRect.left + ", right: " + focusRect.right + ", top: " + focusRect.top + ", bottom: " + focusRect.bottom + ", centerX: " + focusRect.centerX() + ", centerY: " + focusRect.centerY());
-            meteringRect = calculateTapArea(x, y, 0.6666666666f);
-            List<Camera.Area> mFocusList = new ArrayList<>();
-            mFocusList.add(new Camera.Area(focusRect, 1000));
-            List<Camera.Area> mMeteringList = new ArrayList<>();
-            mMeteringList.add(new Camera.Area(meteringRect, 1000));
-            setFocusParameter(mFocusList, mMeteringList);
-        }
-    }
-
-    //将参数设置到相机
-    private void setFocusParameter(List<Camera.Area> mFocusList, List<Camera.Area> mMeteringList) {
-        Camera.Parameters parameters = mCamera.getParameters();
-        Log.d(TAG, "setFocusArea: FOCUS_MODE: " + parameters.getSupportedFocusModes().toString());
-        if (parameters.getSupportedFocusModes().contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-        } else if (parameters.getSupportedFocusModes().contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE))
-            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+    private void setFocusArea(float x,float y){
+        Rect focusRect=calculateTapArea(x,y,0.33333f);
+        Log.d(TAG, "onTouch: left: "+focusRect.left+", right: "+focusRect.right+", top: "+focusRect.top+", bottom: "+focusRect.bottom+", centerX: "+focusRect.centerX()+", centerY: "+focusRect.centerY());
+        Rect meteringRect=calculateTapArea(x,y,1f);
+        List<Camera.Area>mFocusList=new ArrayList<>();
+        mFocusList.add(new Camera.Area(focusRect,1000));
+        List<Camera.Area>mMeteringList=new ArrayList<>();
+        mMeteringList.add(new Camera.Area(meteringRect,1000));
+        Camera.Parameters parameters=mCamera.getParameters();
+        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         mCamera.cancelAutoFocus();
-        if (parameters.getMaxNumFocusAreas() > 0) {
+        if (parameters.getMaxNumFocusAreas()>0){
             parameters.setFocusAreas(mFocusList);
         }
-        if (parameters.getMaxNumMeteringAreas() > 0) {
+        if (parameters.getMaxNumMeteringAreas()>0){
             parameters.setMeteringAreas(mMeteringList);
         }
         mCamera.setParameters(parameters);
         mCamera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
-                if (success) {
-                    doTakePic();
+                if (success){
                     Log.d(TAG, "onAutoFocus: auto focus success!");
                 }
             }
@@ -256,8 +230,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     //计算对应的聚焦和曝光区域
     private Rect calculateTapArea(float x, float y, float v) {
-        int FOCUS_AREA_SIZE = 300;
-        int areaSize = Float.valueOf(FOCUS_AREA_SIZE * v).intValue();
+        int FOCUS_AREA_SIZE=300;
+        int areaSize=Float.valueOf(FOCUS_AREA_SIZE*v).intValue();
         //Rect rect=new Rect((int)x-areaSize,(int)y-areaSize,(int)x+areaSize,(int)y+areaSize);
         /*Paint paint = new Paint();
         paint.setColor(Color.GREEN);
@@ -266,54 +240,54 @@ public class FaceDetectorActivity extends AppCompatActivity {
         Canvas canvas=new Canvas();
         canvas.drawRect(rect,paint);
         surfaceView.draw(canvas);*/
-        int centerx = (int) x * 2000 / surfaceView.getWidth() - 1000;
-        int centery = (int) y * 2000 / surfaceView.getHeight() - 1000;
-        Log.d(TAG, "calculateTapArea: x: " + x + ", y: " + y + ", areaSize: " + areaSize);
-        int left = centerx - areaSize;//rect.left*2000/surfaceView.getWidth()-1000;
-        int top = centery - areaSize;//rect.top*2000/surfaceView.getHeight()-1000;
-        int right = centerx + areaSize;//rect.right*2000/surfaceView.getWidth()-1000;
-        int bottom = centery + areaSize;//rect.bottom*2000/surfaceView.getHeight()-1000;
-        left = left < -1000 ? -1000 : left;
-        right = right > 1000 ? 1000 : right;
-        top = top < -1000 ? -1000 : top;
-        bottom = bottom > 1000 ? 1000 : bottom;
-        return new Rect(left, top, right, bottom);
+        int centerx=(int)x*2000/surfaceView.getWidth()-1000;
+        int centery=(int)y*2000/surfaceView.getHeight()-1000;
+        Log.d(TAG, "calculateTapArea: x: "+x+", y: "+y+", areaSize: "+areaSize);
+        int left=centerx-areaSize;//rect.left*2000/surfaceView.getWidth()-1000;
+        int top=centery-areaSize;//rect.top*2000/surfaceView.getHeight()-1000;
+        int right=centerx+areaSize;//rect.right*2000/surfaceView.getWidth()-1000;
+        int bottom=centery+areaSize;//rect.bottom*2000/surfaceView.getHeight()-1000;
+        left=left<-1000?-1000:left;
+        right=right>1000?1000:right;
+        top=top<-1000?-1000:top;
+        bottom=bottom>1000?1000:bottom;
+        return new Rect(left,top,right,bottom);
     }
 
-    private void saveImages() {
+    private void saveFaceImages() {
         mCamera.stopPreview();
-        String fileName = mPath;
-        Log.d(TAG, "onClick: 存储文件夹：" + mPath);
-        File dir = new File(mPath);
-        if (!dir.exists()) {
+        String fileName=mPath;
+        Log.d(TAG, "onClick: 存储文件夹："+mPath);
+        File dir=new File(mPath);
+        if (!dir.exists()){
             dir.mkdir();
             Log.d(TAG, "onClick: 已创建文件夹");
         }
-        Log.d(TAG, "onClick: 文件夹已创建：" + dir.exists());
-        for (int i = 0; i < images.size(); i++) {
-            fileName = fileName + "IMG_";
-            String timeStamp = (new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date());
-            fileName = fileName + timeStamp + i + ".jpg";
-            Log.d(TAG, "onClick: 文件名：" + fileName);
-            Log.d(TAG, "onClick: 保存第 " + (i + 1) + "/" + images.size() + " 张图片");
+        Log.d(TAG, "onClick: 文件夹已创建："+dir.exists());
+        for (int i=0;i<faceImages.size();i++){
+            fileName=fileName+"IMG_Face_";
+            String timeStamp=(new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date());
+            fileName=fileName+timeStamp+i+".jpg";
+            Log.d(TAG, "onClick: 文件名："+fileName);
+            Log.d(TAG, "onClick: 保存第 "+(i+1)+"/"+faceImages.size()+" 张图片");
             try {
-                File imageFile = new File(fileName);
+                File imageFile=new File(fileName);
                 if (!imageFile.exists()) {
                     imageFile.createNewFile();
                 }
-                if (imageFile.exists()) {
-                    Log.d(TAG, "saveFaceImages: " + fileName + "创建成功");
+                if (imageFile.exists()){
+                    Log.d(TAG, "saveFaceImages: "+fileName+"创建成功");
                 }
-                BufferedSink bs = Okio.buffer(Okio.sink(imageFile));
-                bs.write(images.get(i));
-                Log.d(TAG, "onClick: 保存路径：" + fileName);
+                BufferedSink bs=Okio.buffer(Okio.sink(imageFile));
+                bs.write(faceImages.get(i));
+                Log.d(TAG, "onClick: 保存路径："+fileName);
                 bs.close();
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            fileName = mPath;
+            fileName=mPath;
         }
     }
 
@@ -338,17 +312,17 @@ public class FaceDetectorActivity extends AppCompatActivity {
             if (faces.length > 0) {
                 Camera.Face face = faces[0];
                 Rect rect = face.rect;
-                float x = (rect.centerX() + 1000) * surfaceView.getWidth() / 2000;
-                float y = (rect.centerY() + 1000) * surfaceView.getHeight() / 2000;
-                //setFocusArea(x,y);
+                float x=(rect.centerX()+1000)*surfaceView.getWidth()/2000;
+                float y=(rect.centerY()+1000)*surfaceView.getHeight()/2000;
+                setFocusArea(x,y);
                 Log.d("FaceDetection", "confidence：" + face.score + "face detected: " + faces.length +
                         " Face 1 Location X: " + rect.centerX() +
                         "Y: " + rect.centerY() + "   " + rect.left + " " + rect.top + " " + rect.right + " " + rect.bottom);
                 Matrix matrix = updateFaceRect();
                 facesView.updateFaces(matrix, faces);
-                if (!isTakingPic) {
+                if (!isTakingPic){
                     doTakePic();
-                    isTakingPic = true;
+                    isTakingPic=true;
                 }
                 //thread.quitSafely();
             } else {
@@ -364,17 +338,17 @@ public class FaceDetectorActivity extends AppCompatActivity {
         mCamera.takePicture(null, null, new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
-                if (data.length > 0) {
-                    images.add(data);
-                    Log.d(TAG, "onPictureTaken: 已添加 " + images.size() + " 张脸部图片");
-                    while (images.size() > 5) {
+                if (data.length>0){
+                   faceImages.add(data);
+                    Log.d(TAG, "onPictureTaken: 已添加 "+faceImages.size()+" 张脸部图片");
+                    while (faceImages.size()>5){
                         Log.d(TAG, "onPictureTaken: 多于5张了，移除之前的");
-                        images.remove(0);
+                        faceImages.remove(faceImages.size()-1);
                     }
                 }
                 mCamera.startPreview();
-                //startFaceDetection();
-                isTakingPic = false;
+                startFaceDetection();
+                isTakingPic=false;
             }
         });
     }
@@ -382,7 +356,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
     /**
      * 因为对摄像头进行了旋转，所以同时也旋转画板矩阵
      * 详细请查看{@link Camera.Face#rect}
-     *
      * @return
      */
     private Matrix updateFaceRect() {

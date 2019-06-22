@@ -6,13 +6,13 @@
 
     <SurfaceView
         android:id="@+id/surfaceView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_width="1080px"
+        android:layout_height="1920px" />
 
     <ImageButton
         android:id="@+id/imageButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="240px"
+        android:layout_height="240px"
         android:layout_gravity="bottom|center"
         app:srcCompat="@android:drawable/ic_menu_camera" />
 </FrameLayout>
