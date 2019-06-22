@@ -1,4 +1,4 @@
-package com.smil.postercamera_demo.util;
+package com.facedetector.util;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
