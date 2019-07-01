@@ -1,18 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
-
+    android:layout_height="match_parent"
+    android:background="@android:color/background_dark">
+<RelativeLayout
+    android:layout_width="match_parent"
+    android:layout_height="570dp"
+    android:layout_above="@+id/bottomBar"
+    >
     <SurfaceView
         android:id="@+id/surfaceView"
-        android:layout_width="1080px"
-        android:layout_height="1920px" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_y="0dp" />
 
+    <ImageView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="invisible" />
+
+    <ProgressBar
+        android:id="@+id/progressBar2"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="invisible" />
+
+</RelativeLayout>
+
+<RelativeLayout
+    android:id="@+id/bottomBar"
+    android:layout_width="match_parent"
+    android:layout_height="240px"
+    android:layout_alignParentBottom="true"
+    >
     <ImageButton
         android:id="@+id/imageButton"
-        android:layout_width="240px"
-        android:layout_height="240px"
-        android:layout_gravity="bottom|center"
+        android:layout_width="180px"
+        android:layout_height="180px"
+        android:layout_centerInParent="true"
+        android:background="@drawable/circle"
         app:srcCompat="@android:drawable/ic_menu_camera" />
-</FrameLayout>
+
+
+</RelativeLayout>
+
+
+
+</RelativeLayout>

@@ -17,9 +17,13 @@ public class FocusCircleView extends View {
 
     public FocusCircleView(Context context){
         super(context);
+        mx = -200;
+        my = -200;
     }
     public FocusCircleView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        mx = -200;
+        my = -200;
     }
 
     public void setPoint(float x, float y){
@@ -31,11 +35,19 @@ public class FocusCircleView extends View {
     public void onDraw(Canvas canvas){
         super.onDraw(canvas);
         paint=new Paint();
-        paint.setColor(Color.WHITE);
+        paint.setColor(Color.parseColor("#D27522"));
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(4);
-        canvas.drawCircle(mx,my,30,paint);
-        canvas.drawCircle(mx,my,100,paint);
+        paint.setStrokeWidth(3);
+        int width = 200;
+        int line = 16;
+        canvas.drawLine(mx-width/2,my,mx-width/2+line,my,paint);
+        canvas.drawLine(mx+width/2,my,mx+width/2-line,my,paint);
+        canvas.drawLine(mx,my-width/2,mx,my-width/2+line,paint);
+        canvas.drawLine(mx,my+width/2,mx,my+width/2 -line,paint);
+
+        canvas.drawRect(mx-width/2,my-width/2,mx+width/2,my+width/2,paint);
+        //canvas.drawCircle(mx,my,30,paint);
+        //canvas.drawCircle(mx,my,100,paint);
     }
 
     public void releaseCanvas(){
@@ -44,7 +56,7 @@ public class FocusCircleView extends View {
     }
 
     public void myViewScaleAnimation(View myView) {
-        ScaleAnimation animation = new ScaleAnimation(1.1f, 1f, 1.1f, 1f,
+        ScaleAnimation animation = new ScaleAnimation(1.2f, 1f, 1.2f, 1f,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF,
                 0.5f);
         animation.setDuration(300);
