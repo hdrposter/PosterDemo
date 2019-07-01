@@ -46,8 +46,7 @@ public class FocusCircleView extends View {
         canvas.drawLine(mx,my+width/2,mx,my+width/2 -line,paint);
 
         canvas.drawRect(mx-width/2,my-width/2,mx+width/2,my+width/2,paint);
-        //canvas.drawCircle(mx,my,30,paint);
-        //canvas.drawCircle(mx,my,100,paint);
+
     }
 
     public void releaseCanvas(){
@@ -56,6 +55,7 @@ public class FocusCircleView extends View {
     }
 
     public void myViewScaleAnimation(View myView) {
+        myView.setVisibility(View.VISIBLE);
         ScaleAnimation animation = new ScaleAnimation(1.2f, 1f, 1.2f, 1f,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF,
                 0.5f);

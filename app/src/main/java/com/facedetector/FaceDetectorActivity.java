@@ -7,6 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.hardware.SensorManager;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.SystemClock;
 
@@ -71,6 +72,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private SurfaceView surfaceView;
     private ImageView previewView;
     private ProgressBar loadView;
+    private ImageView imageView; //拍照左下角缩略图
     private Camera mCamera;
     private SurfaceHolder mHolder;
     private DrawFacesView facesView;
@@ -221,6 +223,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
         surfaceView = (SurfaceView)this.findViewById(R.id.surfaceView);
         previewView = (ImageView) this.findViewById(R.id.previewView);
         loadView = (ProgressBar) this.findViewById(R.id.progressBar2);
+        imageView = (ImageView) this.findViewById(R.id.imageView);
+
         facesView = new DrawFacesView(this);
         focusView=new FocusCircleView(this);
         actionView = new ActionView(this);
@@ -333,7 +337,9 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     previewView.setVisibility(View.INVISIBLE);
 
                     //保存图片
-                    saveFaceImages();
+                    SavePictureTask saveTask = new SavePictureTask();
+                    saveTask.execute();
+                    //saveFaceImages();
                 }
 
             }
@@ -349,14 +355,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private Rect calculateTapArea(float x, float y, float v) {
         int FOCUS_AREA_SIZE=300;
         int areaSize=Float.valueOf(FOCUS_AREA_SIZE*v).intValue();
-      /*  Rect rect=new Rect((int)x-areaSize,(int)y-areaSize,(int)x+areaSize,(int)y+areaSize);
-        Paint paint = new Paint();
-        paint.setColor(Color.GREEN);
-        paint.setAntiAlias(true);
-        paint.setStyle(Paint.Style.STROKE);
-        Canvas canvas=new Canvas();
-        canvas.drawRect(rect,paint);
-        surfaceView.draw(canvas);*/
+
         int centerx=(int)x*2000/surfaceView.getWidth()-1000;
         int centery=(int)y*2000/surfaceView.getHeight()-1000;
         Log.d(TAG, "calculateTapArea: x: "+x+", y: "+y+", areaSize: "+areaSize);
@@ -469,9 +468,10 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     //设置拍照瞬间预览
     private void setPreview(Bitmap img){
+        focusView.setVisibility(View.INVISIBLE);
         previewView.setVisibility(View.VISIBLE);
         previewView.setImageBitmap(img);
-
+        imageView.setImageBitmap(img);
     }
 
     @Override
@@ -585,7 +585,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         // 获取摄像头支持的PreviewSize列表
        List<Camera.Size> previewSizeList = parameters.getSupportedPreviewSizes();
         Camera.Size preSize = getProperSize(previewSizeList, (float) height / width);
-
+        Log.d(TAG,"preview size:"+preSize.width+" "+preSize.height);
         if (null != preSize) {
             Log.d(TAG,"preview size:"+preSize.width+" "+preSize.height);
             parameters.setPreviewSize(preSize.width, preSize.height);
@@ -594,7 +594,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         List<Camera.Size> pictureSizeList = parameters.getSupportedPictureSizes();
         float previewRatio = (float)preSize.width / preSize.height;
 
-        Camera.Size pictureSize = getProperSize(pictureSizeList, previewRatio);
+        Camera.Size pictureSize = getProperSize(pictureSizeList, previewRatio,true);
         if (null == pictureSize) {
             pictureSize = parameters.getPictureSize();
         }
@@ -618,20 +618,39 @@ public class FaceDetectorActivity extends AppCompatActivity {
         Params.height = (int)(previewRatio *width);
 
         surfaceView.setLayoutParams(Params);
+        previewView.setLayoutParams(Params);
 
     }
 
+    private Camera.Size getProperSize(List<Camera.Size> pictureSizes, float screenRatio){
+        return getProperSize(pictureSizes,screenRatio,false);
+    }
 
-    private Camera.Size getProperSize(List<Camera.Size> pictureSizes, float screenRatio) {
+    private Camera.Size getProperSize(List<Camera.Size> pictureSizes, float screenRatio,boolean equal) {
         Camera.Size result = null;
+        float minDiff = 1000;
         float maxWidth = 0;
         for (Camera.Size size : pictureSizes) {
-
+            Log.d(TAG, "size:" + size.width + " " + size.height);
             float currenRatio = ((float) size.width) / size.height;
-            if (currenRatio - screenRatio == 0 && size.width > maxWidth) {
-                result = size;
-                maxWidth = size.width;
-                //break;
+            Log.d(TAG, "currenRatio:" + currenRatio + " screenRatio:" + screenRatio + " maxWdith:" + maxWidth);
+
+            if (equal) {
+                if (currenRatio - screenRatio ==0 && size.width > maxWidth) {
+                    result = size;
+                    maxWidth = size.width;
+                    minDiff = Math.abs(currenRatio - screenRatio);
+                    Log.d(TAG, "minDiff:" + minDiff);
+
+                }
+            } else {
+                if (Math.abs(currenRatio - screenRatio) <= minDiff && size.width > maxWidth) {
+                    result = size;
+                    maxWidth = size.width;
+                    minDiff = Math.abs(currenRatio - screenRatio);
+                    Log.d(TAG, "minDiff:" + minDiff);
+
+                }
             }
         }
         if (null == result) {
@@ -646,4 +665,16 @@ public class FaceDetectorActivity extends AppCompatActivity {
         return result;
     }
 
+    private class SavePictureTask extends AsyncTask<byte[],String,String>{
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+        @Override
+        protected String doInBackground(byte[]... params) {
+            Log.d("=======","background");
+            saveFaceImages();
+            return null;
+        }
+    }
 }

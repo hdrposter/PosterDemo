@@ -6,17 +6,20 @@
     android:layout_height="match_parent"
     android:background="@android:color/background_dark">
 
+
     <SurfaceView
         android:id="@+id/surfaceView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_y="0dp" />
+        />
 
     <ImageView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_alignTop="@+id/surfaceView"
         android:visibility="invisible" />
+
 
     <ProgressBar
         android:id="@+id/progressBar2"
@@ -27,11 +30,10 @@
         android:visibility="invisible" />
 
 
-
 <RelativeLayout
     android:id="@+id/bottomBar"
     android:layout_width="match_parent"
-    android:layout_height="260px"
+    android:layout_height="280px"
     android:layout_alignParentBottom="true"
     android:background="#4d000000"
     >
@@ -45,12 +47,12 @@
 
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="180px"
-        android:layout_height="180px"
+        android:layout_width="150px"
+        android:layout_height="150px"
         android:layout_alignParentLeft="true"
         android:layout_centerVertical="true"
-        android:layout_marginLeft="20px"
-        android:scaleType="center"
+        android:layout_marginLeft="40px"
+        android:scaleType="centerCrop"
         tools:srcCompat="@tools:sample/backgrounds/scenic" />
 
 
