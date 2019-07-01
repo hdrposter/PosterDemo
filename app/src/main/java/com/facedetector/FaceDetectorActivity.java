@@ -1,9 +1,16 @@
 package com.facedetector;
 
 import android.Manifest;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.hardware.SensorManager;
 import android.os.Environment;
 import android.os.SystemClock;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 
 import okio.BufferedSink;
@@ -24,6 +31,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.OrientationEventListener;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -31,8 +39,12 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.facedetector.customview.ActionView;
 import com.facedetector.customview.DrawFacesView;
 import com.facedetector.customview.FocusCircleView;
 
@@ -57,16 +69,27 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private static final String TAG = FaceDetectorActivity.class.getSimpleName();
     private static final int REQUEST_CAMERA_CODE = 0x100;
     private SurfaceView surfaceView;
+    private ImageView previewView;
+    private ProgressBar loadView;
     private Camera mCamera;
     private SurfaceHolder mHolder;
     private DrawFacesView facesView;
     private FocusCircleView focusView;
+    private ActionView actionView;
     private ImageButton imageButton;
     private int exposure;
     private String iso;
     private String mPath;
     private boolean isTakingPic;
-    private ArrayList<byte[]> images;
+
+    private ArrayList<byte[]> images; //按下快门后捕捉的照片
+
+    private OrientationEventListener mOrientationListener; //方向监听
+    private Direction direction = Direction.Up; //实时相机方向
+    //四个方向
+    private enum Direction{
+        Up,Down,Left,Right
+    }
 
     public static void start(Context context) {
         Intent intent = new Intent(context, FaceDetectorActivity.class);
@@ -82,6 +105,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         }
         setContentView(R.layout.activity_face);
         images=new ArrayList<>();
+
         isTakingPic=false;
         mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
         initViews();
@@ -102,7 +126,34 @@ public class FaceDetectorActivity extends AppCompatActivity {
             }
             openSurfaceView();
         }
+
+        //开启方向监听
+        mOrientationListener = new OrientationEventListener(this,
+                SensorManager.SENSOR_DELAY_NORMAL) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                if(orientation>=0 && orientation <45 || orientation>=315){
+                    direction = Direction.Up;
+                }else if(orientation>=45 && orientation <135){
+                    direction = Direction.Right;
+                }else if(orientation>=135 && orientation <225){
+                    direction = Direction.Down;
+                }else if(orientation >=225 && orientation < 315){
+                    direction = Direction.Left;
+                }
+                //Log.v(TAG,"Orientation changed to " + orientation+" Direction changed to "+direction);
+            }
+        };
+
+        if (mOrientationListener.canDetectOrientation()) {
+            Log.v(TAG, "Can detect orientation");
+            mOrientationListener.enable();
+        } else {
+            Log.v(TAG, "Cannot detect orientation");
+            mOrientationListener.disable();
+        }
     }
+
 
     /**
      * 把摄像头的图像显示到SurfaceView
@@ -168,15 +219,23 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     private void initViews() {
         surfaceView = (SurfaceView)this.findViewById(R.id.surfaceView);
+        previewView = (ImageView) this.findViewById(R.id.previewView);
+        loadView = (ProgressBar) this.findViewById(R.id.progressBar2);
         facesView = new DrawFacesView(this);
         focusView=new FocusCircleView(this);
-        addContentView(focusView,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
-        addContentView(facesView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        actionView = new ActionView(this);
+        addContentView(focusView,new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT));
+        //addContentView(facesView, new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
+        addContentView(actionView, new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
         imageButton=(ImageButton)this.findViewById(R.id.imageButton);
         imageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveFaceImages();
+                //saveFaceImages();
+                if(actionView!=null){
+                    actionView.show();
+                }
+                takePhoto();//拍照
             }
         });
         surfaceView.setOnTouchListener(new View.OnTouchListener() {
@@ -197,7 +256,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     //设置特定的对焦、曝光区域
     private void setFocusArea(float x,float y){
         Rect focusRect=calculateTapArea(x,y,0.33333f);
-        Log.d(TAG, "onTouch: left: "+focusRect.left+", right: "+focusRect.right+", top: "+focusRect.top+", bottom: "+focusRect.bottom+", centerX: "+focusRect.centerX()+", centerY: "+focusRect.centerY());
+        //Log.d(TAG, "onTouch: left: "+focusRect.left+", right: "+focusRect.right+", top: "+focusRect.top+", bottom: "+focusRect.bottom+", centerX: "+focusRect.centerX()+", centerY: "+focusRect.centerY());
         Rect meteringRect=calculateTapArea(x,y,1f);
         List<Camera.Area>mFocusList=new ArrayList<>();
         mFocusList.add(new Camera.Area(focusRect,1000));
@@ -205,19 +264,28 @@ public class FaceDetectorActivity extends AppCompatActivity {
         mMeteringList.add(new Camera.Area(meteringRect,1000));
         final Camera.Parameters parameters=mCamera.getParameters();
         parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-        mCamera.cancelAutoFocus();
+        Log.d(TAG, "setFocusArea: "+parameters.getSupportedFocusModes().toString());
+        //mCamera.cancelAutoFocus();
         if (parameters.getMaxNumFocusAreas()>0){
             parameters.setFocusAreas(mFocusList);
         }
         if (parameters.getMaxNumMeteringAreas()>0){
             parameters.setMeteringAreas(mMeteringList);
         }
-        mCamera.setParameters(parameters);
+
+        try {
+            mCamera.setParameters(parameters);
+        }catch (RuntimeException e) {
+
+            Log.d(TAG, "failed to set parameters");
+            e.printStackTrace();
+        }
         mCamera.autoFocus(new Camera.AutoFocusCallback() {
             @Override
             public void onAutoFocus(boolean success, Camera camera) {
                 if (success){
-                    takeExposurePic(parameters.getMinExposureCompensation());
+                    //takeExposurePic(parameters.getMinExposureCompensation());
+
                     Log.d(TAG, "onAutoFocus: auto focus success!");
                 }
             }
@@ -231,24 +299,44 @@ public class FaceDetectorActivity extends AppCompatActivity {
         final Camera.Parameters parameters=mCamera.getParameters();
         final int maxExposure=parameters.getMaxExposureCompensation();
         final int minExposure=parameters.getMinExposureCompensation();
+        Log.d(TAG, "takeExposurePic: max exposure: "+maxExposure+", min exposure: "+ minExposure+", current exposure: "+exposure);
         parameters.setExposureCompensation(exposure);
         mCamera.setParameters(parameters);
         mCamera.takePicture(null, null, new Camera.PictureCallback() {
             @Override
             public void onPictureTaken(byte[] data, Camera camera) {
                 if (data.length>0){
-                    images.add(data);
-                    Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
-                    while (images.size()>10){
+                    images.add(data);//捕捉当前照片
+
+                    //当前第一张，作为预览
+                    if(exposure ==minExposure){
+                        //Bitmap bm = rotateImageBitmap(data,direction);
+
+                        //setPreview(bm);
+                    }
+                    //Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
+                    /*while (images.size()>10){
                         Log.d(TAG, "onPictureTaken: 多于5张了，移除之前的");
                         images.remove(images.size()-1);
-                    }
+                    }*/
                 }
                 mCamera.startPreview();
-                if (exposure<maxExposure){
-                    int nextExposure=exposure+(maxExposure-minExposure)/4;
+
+                int nextExposure=exposure+(maxExposure-minExposure)/2;
+                if (nextExposure<=maxExposure){
                     takeExposurePic(nextExposure);
+                }else{//拍摄结束
+                    parameters.setExposureCompensation(0); //恢复曝光补偿
+                    mCamera.setParameters(parameters);
+                    //关闭预览
+                    Log.d(TAG,"关闭loading");
+                    loadView.setVisibility(View.INVISIBLE);
+                    //previewView.setVisibility(View.INVISIBLE);
+
+                    //保存图片
+                    saveFaceImages();
                 }
+
             }
         });
     }
@@ -262,8 +350,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private Rect calculateTapArea(float x, float y, float v) {
         int FOCUS_AREA_SIZE=300;
         int areaSize=Float.valueOf(FOCUS_AREA_SIZE*v).intValue();
-        //Rect rect=new Rect((int)x-areaSize,(int)y-areaSize,(int)x+areaSize,(int)y+areaSize);
-        /*Paint paint = new Paint();
+      /*  Rect rect=new Rect((int)x-areaSize,(int)y-areaSize,(int)x+areaSize,(int)y+areaSize);
+        Paint paint = new Paint();
         paint.setColor(Color.GREEN);
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.STROKE);
@@ -285,15 +373,15 @@ public class FaceDetectorActivity extends AppCompatActivity {
     }
 
     private void saveFaceImages() {
-        mCamera.stopPreview();
+        //mCamera.stopPreview();
         String fileName=mPath;
         Log.d(TAG, "onClick: 存储文件夹："+mPath);
         File dir=new File(mPath);
         if (!dir.exists()){
             dir.mkdir();
-            Log.d(TAG, "onClick: 已创建文件夹");
+            //Log.d(TAG, "onClick: 已创建文件夹");
         }
-        Log.d(TAG, "onClick: 文件夹已创建："+dir.exists());
+        //Log.d(TAG, "onClick: 文件夹已创建："+dir.exists());
         for (int i=0;i<images.size();i++){
             fileName=fileName+"IMG_";
             String timeStamp=(new SimpleDateFormat("yyyyMMdd_HHmmss")).format(new Date());
@@ -309,7 +397,10 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     Log.d(TAG, "saveFaceImages: "+fileName+"创建成功");
                 }
                 BufferedSink bs=Okio.buffer(Okio.sink(imageFile));
-                bs.write(images.get(i));
+                //调整方向后存储照片
+
+                bs.write(rotateImage(images.get(i),direction));
+
                 Log.d(TAG, "onClick: 保存路径："+fileName);
                 bs.close();
             } catch (FileNotFoundException e) {
@@ -319,6 +410,69 @@ public class FaceDetectorActivity extends AppCompatActivity {
             }
             fileName=mPath;
         }
+        //清空缓存照片
+        images = new ArrayList<>();
+    }
+
+    //旋转图片 返回byte[]
+    private byte[] rotateImage(byte[] img, Direction direction){
+
+        Bitmap newImg = rotateImageBitmap(img,direction);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        newImg.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+
+        newImg = null;
+
+        return baos.toByteArray();
+    }
+
+    //旋转照片 返回bitmap
+    private Bitmap rotateImageBitmap(byte[] img,Direction direction){
+        Bitmap bitmap = BitmapFactory.decodeByteArray(img,0,img.length);
+        if (bitmap == null)
+            return null;
+
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+
+        Matrix mtx = new Matrix();
+
+        switch (direction){
+            case Up:
+                mtx.postRotate(90);
+                break;
+            case Left:
+                mtx.postRotate(0);
+                break;
+            case Right:
+                mtx.postRotate(180);
+                break;
+            case Down:
+                mtx.postRotate(-90);
+                break;
+        }
+        return Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, true);
+    }
+
+    /*正式拍照*/
+    private void takePhoto(){
+
+        final Camera.Parameters parameters=mCamera.getParameters();
+        final int minExpose = parameters.getMinExposureCompensation();
+        final int maxExpose = parameters.getMaxExposureCompensation();
+        final int medianExpose = 0;
+
+        loadView.setVisibility(View.VISIBLE);
+        takeExposurePic(minExpose);
+
+    }
+
+    //设置拍照瞬间预览
+    private void setPreview(Bitmap img){
+        previewView.setVisibility(View.VISIBLE);
+        previewView.setImageBitmap(img);
+
     }
 
     @Override
@@ -439,7 +593,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         float h = pictureSize.height;
         parameters.setPictureSize(pictureSize.width, pictureSize.height);
 
-        surfaceView.setLayoutParams(new FrameLayout.LayoutParams((int) (height * (h / w)), height));
+        //surfaceView.setLayoutParams(new RelativeLayout.LayoutParams((int) (height * (h / w)), height));
 
         // 获取摄像头支持的PreviewSize列表
         List<Camera.Size> previewSizeList = parameters.getSupportedPreviewSizes();
