@@ -166,7 +166,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                 if (mCamera == null) {
                     mCamera = Camera.open();
                     try {
-                        mCamera.setFaceDetectionListener(new FaceDetectorListener());
+                        //mCamera.setFaceDetectionListener(new FaceDetectorListener());
                         mCamera.setPreviewDisplay(holder);
                         //startFaceDetection();
                     } catch (IOException e) {
@@ -310,9 +310,9 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
                     //当前第一张，作为预览
                     if(exposure ==minExposure){
-                        //Bitmap bm = rotateImageBitmap(data,direction);
+                        Bitmap bm = rotateImageBitmap(data,Direction.Up);
 
-                        //setPreview(bm);
+                        setPreview(bm);
                     }
                     //Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
                     /*while (images.size()>10){
@@ -329,9 +329,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     parameters.setExposureCompensation(0); //恢复曝光补偿
                     mCamera.setParameters(parameters);
                     //关闭预览
-                    Log.d(TAG,"关闭loading");
                     loadView.setVisibility(View.INVISIBLE);
-                    //previewView.setVisibility(View.INVISIBLE);
+                    previewView.setVisibility(View.INVISIBLE);
 
                     //保存图片
                     saveFaceImages();
@@ -580,27 +579,31 @@ public class FaceDetectorActivity extends AppCompatActivity {
      * @param height
      */
     private void setCameraParms(Camera camera, int width, int height) {
-        // 获取摄像头支持的pictureSize列表
+
         Camera.Parameters parameters = camera.getParameters();
+
+        // 获取摄像头支持的PreviewSize列表
+       List<Camera.Size> previewSizeList = parameters.getSupportedPreviewSizes();
+        Camera.Size preSize = getProperSize(previewSizeList, (float) height / width);
+
+        if (null != preSize) {
+            Log.d(TAG,"preview size:"+preSize.width+" "+preSize.height);
+            parameters.setPreviewSize(preSize.width, preSize.height);
+        }
+
         List<Camera.Size> pictureSizeList = parameters.getSupportedPictureSizes();
-        // 从列表中选择合适的分辨率
-        Camera.Size pictureSize = getProperSize(pictureSizeList, (float) height / width);
+        float previewRatio = (float)preSize.width / preSize.height;
+
+        Camera.Size pictureSize = getProperSize(pictureSizeList, previewRatio);
         if (null == pictureSize) {
             pictureSize = parameters.getPictureSize();
         }
         // 根据选出的PictureSize重新设置SurfaceView大小
         float w = pictureSize.width;
         float h = pictureSize.height;
+        Log.d(TAG,"picture size:"+pictureSize.width+" "+pictureSize.height);
         parameters.setPictureSize(pictureSize.width, pictureSize.height);
 
-        //surfaceView.setLayoutParams(new RelativeLayout.LayoutParams((int) (height * (h / w)), height));
-
-        // 获取摄像头支持的PreviewSize列表
-        List<Camera.Size> previewSizeList = parameters.getSupportedPreviewSizes();
-        Camera.Size preSize = getProperSize(previewSizeList, (float) height / width);
-        if (null != preSize) {
-            parameters.setPreviewSize(preSize.width, preSize.height);
-        }
         parameters.setJpegQuality(100);
         if (parameters.getSupportedFocusModes().contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
             // 连续对焦
@@ -609,15 +612,26 @@ public class FaceDetectorActivity extends AppCompatActivity {
         camera.cancelAutoFocus();
         camera.setDisplayOrientation(90);
         camera.setParameters(parameters);
+
+        RelativeLayout.LayoutParams Params = (RelativeLayout.LayoutParams) surfaceView.getLayoutParams();
+        Params.width = width;
+        Params.height = (int)(previewRatio *width);
+
+        surfaceView.setLayoutParams(Params);
+
     }
+
 
     private Camera.Size getProperSize(List<Camera.Size> pictureSizes, float screenRatio) {
         Camera.Size result = null;
+        float maxWidth = 0;
         for (Camera.Size size : pictureSizes) {
+
             float currenRatio = ((float) size.width) / size.height;
-            if (currenRatio - screenRatio == 0) {
+            if (currenRatio - screenRatio == 0 && size.width > maxWidth) {
                 result = size;
-                break;
+                maxWidth = size.width;
+                //break;
             }
         }
         if (null == result) {
