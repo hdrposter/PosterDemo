@@ -18,6 +18,8 @@ android {
     }
 }
 
+apply from:'download.gradle'
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
