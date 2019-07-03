@@ -7,8 +7,8 @@
     android:background="@android:color/background_dark">
 
 
-    <SurfaceView
-        android:id="@+id/surfaceView"
+    <TextureView
+        android:id="@+id/textureView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         />
@@ -17,7 +17,7 @@
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_alignTop="@+id/surfaceView"
+        android:layout_alignTop="@+id/textureView"
         android:visibility="invisible" />
 
 
