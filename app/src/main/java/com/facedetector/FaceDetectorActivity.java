@@ -82,6 +82,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private int exposure;
     private String iso;
     private String mPath;
+    private String previewPath;
     private boolean isTakingPic;
     private int currPic; //当前拍摄
 
@@ -256,6 +257,21 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     focusView.setPoint(x,y);
                 }
                 return true;
+            }
+        });
+
+
+
+        imageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG,"touch");
+                if (previewPath!=null){
+                   Intent intent = new Intent(FaceDetectorActivity.this, PreviewActivity.class);
+                    intent.putExtra("path",previewPath);
+                    startActivity(intent);
+                }
+
             }
         });
     }
@@ -465,6 +481,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                 //调整方向后存储照片
 
                 bs.write(rotateImage(images.get(i),imageDirections.get(i)));
+                previewPath = fileName;
 
                 Log.d(TAG, "onClick: 保存路径："+fileName);
                 bs.close();
