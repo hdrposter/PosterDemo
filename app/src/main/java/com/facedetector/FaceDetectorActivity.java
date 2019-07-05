@@ -5,6 +5,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.SurfaceTexture;
 import android.hardware.SensorManager;
@@ -17,6 +18,7 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -459,33 +461,58 @@ public class FaceDetectorActivity extends AppCompatActivity {
             if (null == mCameraDevice) {
                 return;
             }
+
+            List<CaptureRequest> captureRequests = new ArrayList<>();
+
             // This is the CaptureRequest.Builder that we use to take a picture.
             final CaptureRequest.Builder captureBuilder =
                     mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(mImageReader.getSurface());
+            //captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            //captureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+            //captureBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF);
+            //captureBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(direction));
+            //captureBuilder.set(CaptureRequest.SENSOR_FRAME_DURATION, 0L);
+
+            if(currPic==0) {
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(100000000));
+
+            }else{
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, new Long(2000000));
+            }
+
+            captureRequests.add(captureBuilder.build());
+
+           /* final CaptureRequest.Builder captureBuilder2 =
+                    mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder2.addTarget(mImageReader.getSurface());
+            captureBuilder2.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            captureBuilder2.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            captureBuilder2.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_OFF);
+            captureBuilder2.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF);
+            captureBuilder2.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_OFF);
+            captureBuilder2.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(direction));
+            captureBuilder2.set(CaptureRequest.SENSOR_FRAME_DURATION, 0L);
+            captureBuilder2.set(CaptureRequest.SENSOR_EXPOSURE_TIME,new Long(2000000));
+            captureRequests.add(captureBuilder2.build());*/
 
             // Use the same AE and AF modes as the preview.
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+           // captureBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+            //        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
 
             //setAutoFlash(captureBuilder);
-            List<CaptureRequest> captureRequests = new ArrayList<>();
+
 
             //降噪
-            captureBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY);
+            //captureBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY);
 
             // Orientation
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(direction));
+
             Log.d(TAG,"CurrPic:"+currPic);
-            if(currPic==0){
-                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,new Long(2000000));
-                Log.d(TAG,"Set exposure time 2");
-            }else if(currPic ==1){
-                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME,new Long(100000000));
-                Log.d(TAG,"Set exposure time 2");
-            }
-            captureRequests.add(captureBuilder.build());
+
 
             mCaptureSession.stopRepeating();
             mCaptureSession.abortCaptures();
@@ -826,7 +853,31 @@ public class FaceDetectorActivity extends AppCompatActivity {
         return sizeMap[0];
     }
 
+    public void startControlAFRequest(MeteringRectangle rect,
+                                      CameraCaptureSession.CaptureCallback captureCallback) {
 
+        MeteringRectangle[] rectangle = new MeteringRectangle[]{rect};
+        // 对焦模式必须设置为AUTO
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_AUTO);
+        //AE
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS,rectangle);
+        //AF 此处AF和AE用的同一个rect, 实际AE矩形面积比AF稍大, 这样测光效果更好
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS,rectangle);
+        try {
+            // AE/AF区域设置通过setRepeatingRequest不断发请求
+            mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), null, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        //触发对焦
+        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,CaptureRequest.CONTROL_AF_TRIGGER_START);
+        try {
+            //触发对焦通过capture发送请求, 因为用户点击屏幕后只需触发一次对焦
+            mCaptureSession.capture(mPreviewRequestBuilder.build(), captureCallback, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
 
     /* old Camera API*/
 
@@ -875,7 +926,9 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private void setFocusArea(float x, float y) {
         try {
             CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(mCameraId);
-
+            //Rect rect = calculateTapArea(x,y,1);
+            //MeteringRectangle rectangle = new MeteringRectangle(rect.centerX(),rect.centerY(),rect.height(),rect.width(),1000);
+            //startControlAFRequest(rectangle,mCaptureCallback);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -998,20 +1051,22 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private void takePhoto() {
         lockFocus();
 
-        loadView.setVisibility(View.VISIBLE);
+        //loadView.setVisibility(View.VISIBLE);
 
     }
 
     /*拍照结束*/
     private void finishTakePhoto() {
-        loadView.setVisibility(View.INVISIBLE);
-        /*if(currPic==0){
+       // loadView.setVisibility(View.INVISIBLE);
+
+        if(currPic==0){
+            //SystemClock.sleep(500);
             takePhoto();
             currPic+=1;
         }else {
             loadView.setVisibility(View.INVISIBLE);
             currPic=0;
-        }*/
+        }
     }
 
     //设置拍照瞬间预览
