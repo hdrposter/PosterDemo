@@ -26,4 +26,5 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     implementation 'com.squareup.okio:okio:1.14.0'
     implementation 'org.jetbrains:annotations-java5:15.0'
+    implementation project(path: ':openCVLibrary341')
 }

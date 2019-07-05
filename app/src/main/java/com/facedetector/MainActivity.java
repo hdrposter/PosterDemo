@@ -22,9 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
-import com.facedetector.util.FaceSDK;
 
 import java.lang.ref.WeakReference;
 
@@ -164,10 +162,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             activity.beginDetect();
             Log.e("tag", " imagePath :" + imagePath);
             // begin detect
-            Bitmap bitmap = new FaceSDK().DetectionBitmap(BitmapFactory.decodeFile(imagePath));
-            if (viewWeakReference.get() != null) {
-                activity.showResult(bitmap);
-            }
         }
 
         private String getPath(Uri uri, ContentResolver provider) {

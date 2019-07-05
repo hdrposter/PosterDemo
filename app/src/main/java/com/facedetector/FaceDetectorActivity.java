@@ -35,23 +35,24 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import com.facedetector.customview.ActionView;
-import com.facedetector.customview.DrawFacesView;
 import com.facedetector.customview.FocusCircleView;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Timer;
+
+import com.facedetector.util.PPTCorrector;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.android.LoaderCallbackInterface;
 
 /**
  * <pre>
@@ -72,7 +73,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private ImageView previewView; //拍照瞬间遮罩视图
     private ProgressBar loadView; //Loading
     private ImageView imageView; //拍照左下角缩略图
-    private DrawFacesView facesView;
     private FocusCircleView focusView; //对焦框
     private ActionView actionView; //拍照动画
     private ImageButton imageButton; //相机快门
@@ -159,6 +159,30 @@ public class FaceDetectorActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onResume(){
+        super.onResume();
+        if (!OpenCVLoader.initDebug()){
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0,this,mLoadCallbake);
+        }else {
+            mLoadCallbake.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }
+
+    private BaseLoaderCallback mLoadCallbake =new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            super.onManagerConnected(status);
+            switch (status){
+                case LoaderCallbackInterface.SUCCESS:
+                    Log.d(TAG, "onManagerConnected: opencv-3.4.1 load success!");
+                    break;
+                default:{
+                    super.onManagerConnected(status);
+                }
+            }
+        }
+    };
 
     /**
      * 把摄像头的图像显示到SurfaceView
@@ -228,7 +252,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
         loadView = (ProgressBar) this.findViewById(R.id.progressBar2);
         imageView = (ImageView) this.findViewById(R.id.imageView);
 
-        facesView = new DrawFacesView(this);
         focusView=new FocusCircleView(this);
         actionView = new ActionView(this);
         addContentView(focusView,new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT,RelativeLayout.LayoutParams.MATCH_PARENT));
@@ -397,7 +420,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     //当前第一张，作为预览
                     if(exposure ==minExposure){
                         Bitmap bm = rotateImageBitmap(data,Direction.Up);
-
                         setPreview(bm);
                     }
                     //Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
@@ -418,6 +440,9 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     //关闭预览
                     loadView.setVisibility(View.INVISIBLE);
                     previewView.setVisibility(View.INVISIBLE);
+
+                    PPTCorrector corrector=new PPTCorrector(images.get(0));
+                    corrector.correction(corrector.getOriginImg());
 
                     //保存图片
                     SavePictureTask saveTask = new SavePictureTask();
@@ -543,8 +568,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
         final Camera.Parameters parameters=mCamera.getParameters();
         final int minExpose = parameters.getMinExposureCompensation();
-        final int maxExpose = parameters.getMaxExposureCompensation();
-        final int medianExpose = 0;
 
         loadView.setVisibility(View.VISIBLE);
 
@@ -573,36 +596,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 脸部检测接口
-     */
-    private class FaceDetectorListener implements Camera.FaceDetectionListener {
-        @Override
-        public void onFaceDetection(Camera.Face[] faces, Camera camera) {
-            if (faces.length > 0) {
-                Camera.Face face = faces[0];
-                Rect rect = face.rect;
-                float x=(rect.centerX()+1000)*surfaceView.getWidth()/2000;
-                float y=(rect.centerY()+1000)*surfaceView.getHeight()/2000;
-                setFocusArea(x,y);
-                Log.d("FaceDetection", "confidence：" + face.score + "face detected: " + faces.length +
-                        " Face 1 Location X: " + rect.centerX() +
-                        "Y: " + rect.centerY() + "   " + rect.left + " " + rect.top + " " + rect.right + " " + rect.bottom);
-                Matrix matrix = updateFaceRect();
-                facesView.updateFaces(matrix, faces);
-                if (!isTakingPic){
-                    doTakePic();
-                    isTakingPic=true;
-                }
-                //thread.quitSafely();
-            } else {
-                // 只会执行一次
-                Log.e("tag", "【FaceDetectorListener】类的方法：【onFaceDetection】: " + "没有脸部");
-                facesView.removeRect();
-            }
-        }
-    }
-
     //FaceDetector capture
     private void doTakePic() {
         mCamera.takePicture(null, null, new Camera.PictureCallback() {
@@ -619,43 +612,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
                 mCamera.startPreview();
             }
         });
-    }
-
-    /**
-     * 因为对摄像头进行了旋转，所以同时也旋转画板矩阵
-     * 详细请查看{@link Camera.Face#rect}
-     * @return
-     */
-    private Matrix updateFaceRect() {
-        Matrix matrix = new Matrix();
-        Camera.CameraInfo info = new Camera.CameraInfo();
-        // Need mirror for front camera.
-        boolean mirror = (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT);
-        matrix.setScale(mirror ? -1 : 1, 1);
-        // This is the value for android.hardware.Camera.setDisplayOrientation.
-        matrix.postRotate(90);
-        // Camera driver coordinates range from (-1000, -1000) to (1000, 1000).
-        // UI coordinates range from (0, 0) to (width, height).
-        matrix.postScale(surfaceView.getWidth() / 2000f, surfaceView.getHeight() / 2000f);
-        matrix.postTranslate(surfaceView.getWidth() / 2f, surfaceView.getHeight() / 2f);
-        return matrix;
-    }
-
-    public void startFaceDetection() {
-        // Try starting Face Detection
-        Camera.Parameters params = mCamera.getParameters();
-        // start face detection only *after* preview has started
-        if (params.getMaxNumDetectedFaces() > 0) {
-            // mCamera supports face detection, so can start it:
-            try {
-                mCamera.startFaceDetection();
-            } catch (Exception e) {
-                e.printStackTrace();
-                // Invoked this method throw exception on some devices but also can detect.
-            }
-        } else {
-            Toast.makeText(this, "Device not support face detection", Toast.LENGTH_SHORT).show();
-        }
     }
 
     /**
