@@ -29,6 +29,11 @@ public class PPTCorrector {
     private Bitmap correctedPPT;
     private String mPath;
     private static String TAG="PPTCorrector: ";
+
+    /**
+     * construct the originImg mat from byte array
+     * @param img byte array from Camera.takePicture
+     */
     public PPTCorrector(byte[] img){
         Bitmap imgBitmap= BitmapFactory.decodeByteArray(img,0,img.length);
         originImg=new Mat(imgBitmap.getHeight(),imgBitmap.getWidth(), CvType.CV_8UC4);
@@ -36,21 +41,41 @@ public class PPTCorrector {
         correctedPPT=null;
         mPath= Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
     }
+
+    /**
+     * perspective correct the ppt
+     * @param img origin image matrix
+     * @return corrected ppt matrix
+     */
     public Mat correction(Mat img){
         Log.d(TAG, "correction: get into correction");
+        //convert to gray matrix
         Mat gray=new Mat();
         Imgproc.cvtColor(img,gray,Imgproc.COLOR_BGR2GRAY);
+
+        //Gausssian blur
         Mat blurred=new Mat();
         Imgproc.GaussianBlur(gray,blurred,new Size(5,5),0);
+
+        //dilate the image
         Mat dilate=new Mat();
         Imgproc.dilate(blurred,dilate,Imgproc.getStructuringElement(Imgproc.MORPH_RECT,new Size(3,3)));
+
+        //Scan edges in img
         Mat edged=new Mat();
         Imgproc.Canny(dilate,edged,30.0,120.0,3,false);
         Mat edged_copy=new Mat();
         edged.copyTo(edged_copy);
+
+        //Find all the points that make up the external boundary
         List<MatOfPoint> cnts=new ArrayList<>();
         Mat hierachy=new Mat();
         Imgproc.findContours(edged_copy,cnts,hierachy,Imgproc.RETR_EXTERNAL,Imgproc.CHAIN_APPROX_SIMPLE);
+
+        /**
+         * find the points that make up a Poly with the biggest area
+         * if the number of points are 4, it mean we find the ppt
+         */
         double maxArea=Imgproc.boundingRect(cnts.get(0)).area();
         int index=0;
         MatOfPoint2f approxCurve = new MatOfPoint2f();
@@ -71,6 +96,8 @@ public class PPTCorrector {
                 }
             }
         }
+
+        //ppt correction
         Mat pptCorrectedMt=new Mat();
         pptCorrectedMt=perspective_transform(img,finalPoint);
         correctedPPT=Bitmap.createBitmap(pptCorrectedMt.cols(),pptCorrectedMt.rows(),Bitmap.Config.ARGB_8888);
@@ -82,6 +109,12 @@ public class PPTCorrector {
         return hierachy;
     }
 
+    /**
+     *correct the ppt with corner points we found
+     * @param img origin img
+     * @param points Point array of corner points
+     * @return corrected ppt matrix
+     */
     private Mat perspective_transform(Mat img,Point[] points) {
         ArrayList<Double> length=new ArrayList<>();
         Mat imgCp=new Mat();
