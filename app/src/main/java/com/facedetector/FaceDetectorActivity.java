@@ -441,7 +441,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     loadView.setVisibility(View.INVISIBLE);
                     previewView.setVisibility(View.INVISIBLE);
 
-                    PPTCorrector corrector=new PPTCorrector(images.get(0));
+                    PPTCorrector corrector=new PPTCorrector(rotateImage(images.get(0),imageDirections.get(0)));
                     corrector.correction(corrector.getOriginImg());
 
                     //保存图片
