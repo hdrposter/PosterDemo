@@ -1,44 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/activity_main"
+    android:id="@+id/RelativeLayout1"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:divider="@drawable/diver"
-    android:dividerPadding="@dimen/dp_16"
-    android:orientation="vertical"
-    android:showDividers="middle"
     tools:context=".MainActivity">
 
     <TextView
-        android:id="@+id/btn1"
-        android:layout_width="match_parent"
-        android:layout_height="?android:attr/actionBarSize"
-        android:background="?android:attr/selectableItemBackground"
-        android:gravity="center_vertical"
-        android:paddingStart="@dimen/dp_16"
-        android:paddingEnd="@dimen/dp_16"
-        android:text="@string/detect_by_camera"
-        android:textAllCaps="false" />
+        android:id="@+id/appname"
+        android:layout_width="wrap_content"
+        android:layout_height="70dp"
+        android:layout_gravity="clip_horizontal"
+        android:text="FaceDetector"
+        android:textColor="#6300bf"
+        android:textSize="30dp"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="15dp"
+        />
 
-    <TextView
-        android:id="@+id/btn_de_face_image"
+    <View
+        android:id="@+id/line"
         android:layout_width="match_parent"
-        android:layout_height="?android:attr/actionBarSize"
-        android:background="?android:attr/selectableItemBackground"
-        android:gravity="center_vertical"
-        android:paddingStart="@dimen/dp_16"
-        android:paddingEnd="@dimen/dp_16"
-        android:text="@string/detect_by_image"
-        android:textAllCaps="false" />
+        android:layout_height="3dp"
+        android:layout_below="@+id/appname"
+        android:layout_marginLeft="30dp"
+        android:layout_marginRight="30dp"
+        android:layout_marginTop="-10dp"
+        android:background="#6300bf"></View>
+
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_x="4dp"
+        android:layout_y="101dp">
 
         <ImageView
             android:id="@+id/iv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </ScrollView>
-</LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btn1"
+        android:layout_width="70dp"
+        android:layout_height="70dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/imgbutton"
+        />
+
+    <ImageView
+        android:id="@+id/folder1"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_below="@id/line"
+        app:srcCompat="@drawable/folder"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="20dp"/>
+
+    <ImageView
+        android:id="@+id/arrow1"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_below="@id/line"
+        app:srcCompat="@drawable/arrowr"
+        android:layout_alignBottom="@id/folder1"
+        android:layout_alignTop="@id/folder1"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"
+        />
+    <ImageView
+        android:id="@+id/folder2"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_below="@id/folder1"
+        app:srcCompat="@drawable/folder"
+        android:layout_marginLeft="30dp"
+        android:layout_marginTop="10dp"/>
+
+    <ImageView
+        android:id="@+id/arrow2"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_below="@id/line"
+        app:srcCompat="@drawable/arrowr"
+        android:layout_alignBottom="@id/folder2"
+        android:layout_alignTop="@id/folder2"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="20dp"
+        />
+
+    <TextView
+        android:id="@+id/images"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/folder1"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_toRightOf="@+id/folder1"
+        android:text="Album"
+        android:textSize="25dp" />
+
+    <TextView
+        android:id="@+id/ppt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/folder2"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_toRightOf="@+id/folder2"
+        android:text="SlidesCorrection"
+        android:textSize="25dp" />
+
+    <TextView
+        android:id="@+id/albumbtn"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignTop="@id/folder1"
+        />
+    <TextView
+        android:id="@+id/slidesbtn"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignTop="@id/folder2"
+        />
+</RelativeLayout>

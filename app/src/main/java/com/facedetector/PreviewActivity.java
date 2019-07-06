@@ -32,7 +32,6 @@ public class PreviewActivity extends AppCompatActivity {
 
     private void openImage(String path){
         dragScaleView.setImageResource(path);
-
     }
 
 }

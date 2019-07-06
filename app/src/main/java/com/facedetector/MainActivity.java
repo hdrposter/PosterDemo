@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -24,7 +25,10 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 
+import java.io.File;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 检测图片中脸部的数量，同时检测至少27张脸
@@ -63,8 +67,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initViews() {
-        btnGallery = findViewById(R.id.btn_de_face_image);
-        btnGallery.setOnClickListener(this);
+        findViewById(R.id.albumbtn).setOnClickListener(this);
         findViewById(R.id.btn1).setOnClickListener(this);
         iv = findViewById(R.id.iv);
     }
@@ -91,15 +94,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn1:
                 FaceDetectorActivity.start(this);
                 break;
-            case R.id.btn_de_face_image:
-                openAlbum();
+           case R.id.albumbtn:
+               String path =  Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+               openAlbum(path);
                 break;
+
         }
     }
 
-    private void openAlbum() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(intent, PICK_IMAGE_ALBUM);
+    private void openAlbum(String path) {
+        Intent intent = new Intent(this,AlbumActivity.class);
+
+        intent.putExtra("path",path);
+        startActivity(intent);
     }
 
     private void showResult(final Bitmap bitmap) {
@@ -177,5 +184,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
+
+
+
 
 }
