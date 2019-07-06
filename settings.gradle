@@ -1,1 +1,1 @@
-include ':app', ':libfacerepository', ':deeplab'
+include ':app', ':libfacerepository'
