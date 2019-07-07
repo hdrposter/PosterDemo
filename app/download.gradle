@@ -1,0 +1,26 @@
+def targetModelPath = "src/main/assets/deeplabv3_257_mv_gpu.tflite"
+def deeplabModelUrl = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/gpu/deeplabv3_257_mv_gpu.tflite"
+
+task downloadDeeplabModel(type: DownloadUrlTask) {
+    doFirst {
+        println "Downloading from ${deeplabModelUrl}"
+    }
+    sourceUrl = "${deeplabModelUrl}"
+    target = file("${targetModelPath}")
+}
+
+class DownloadUrlTask extends DefaultTask {
+    @Input
+    String sourceUrl
+
+    @OutputFile
+    File target
+
+    @TaskAction
+    void download() {
+        ant.get(src: sourceUrl, dest: target)
+    }
+}
+
+
+preBuild.dependsOn downloadDeeplabModel

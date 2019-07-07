@@ -42,6 +42,7 @@ import android.widget.RelativeLayout;
 
 import com.facedetector.customview.ActionView;
 import com.facedetector.customview.FocusCircleView;
+import com.facedetector.util.DeepLab;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,6 +68,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     private static final String TAG = FaceDetectorActivity.class.getSimpleName();
     private static final int REQUEST_CAMERA_CODE = 0x100;
+
+    private DeepLab deeplab;
 
     //UI相关
     private SurfaceView surfaceView;
@@ -156,6 +159,13 @@ public class FaceDetectorActivity extends AppCompatActivity {
         } else {
             Log.v(TAG, "Cannot detect orientation");
             mOrientationListener.disable();
+        }
+
+        // 载入 DeepLab
+        try {
+            deeplab = new DeepLab(this, 2);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -572,7 +582,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         loadView.setVisibility(View.VISIBLE);
 
         currPic = 0;
-        takeExposurePic(minExpose);
+        takeExposurePic(0);
         //takeExposurePic();
     }
 
@@ -718,6 +728,29 @@ public class FaceDetectorActivity extends AppCompatActivity {
             Log.d("=======","background");
             saveFaceImages();
             return null;
+        }
+    }
+
+    private class DeepLabInferenceTask extends AsyncTask<byte[], Void, Boolean[][]> {
+
+        @Override
+        protected Boolean[][] doInBackground(byte[]... bytes) {
+            Log.v(TAG, "call DeepLab function");
+            deeplab.setImageData(bytes[0]);
+            deeplab.runInference();
+            return deeplab.getTVSegment();
+        }
+
+        @Override
+        protected void onPostExecute(Boolean[][] isTV) {
+            // TODO 处理 isTV 分割结果
+            int x = 0;
+            for (Boolean[] booleans : isTV) {
+                for (Boolean b : booleans) {
+                    if (b)
+                        x++;
+                }
+            }
         }
     }
 }
