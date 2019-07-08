@@ -18,13 +18,13 @@ import java.nio.channels.FileChannel;
 
 public class DeepLab {
     private final String TAG = "DeepLab";
-    private GpuDelegate gpuDelegate = null;
     private final Interpreter.Options tfliteOptions = new Interpreter.Options();
 
     /**
      * Settings
      **/
     private final String MODEL_PATH = "deeplabv3_257_mv_gpu.tflite";
+    private final boolean USE_GPU = false;
     private final int IMG_H = 257;
     private final int IMG_W = 257;
     private final int IMG_C = 3;
@@ -60,6 +60,9 @@ public class DeepLab {
         long startTime = System.currentTimeMillis();
         tfliteModel = loadModelFile(activity);
         tfliteOptions.setNumThreads(numThreads);
+        if (USE_GPU) {
+            tfliteOptions.addDelegate(new GpuDelegate());
+        }
         tflite = new Interpreter(tfliteModel, tfliteOptions);
         imgData = ByteBuffer.allocateDirect(IMG_H * IMG_W * IMG_C * BYTES_PER_CHANNEL);
         imgData.order(ByteOrder.nativeOrder());
