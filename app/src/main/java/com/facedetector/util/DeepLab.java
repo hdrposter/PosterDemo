@@ -40,11 +40,14 @@ public class DeepLab {
     private ByteBuffer imgData = null;
 
     /**
+     * A ByteBuffer to hold segmentation data, as output of TensorFlow Lite.
+     */
+    private ByteBuffer outData = null;
+
+    /**
      * Preallocated buffers for storing image data in.
      */
     private final int[] intValues = new int[IMG_H * IMG_W];
-
-    private float[][][][] segment = new float[1][IMG_W][IMG_H][CATEGORY_N];
 
     /**
      * An instance of the driver class to run model inference with Tensorflow Lite.
@@ -66,6 +69,8 @@ public class DeepLab {
         tflite = new Interpreter(tfliteModel, tfliteOptions);
         imgData = ByteBuffer.allocateDirect(IMG_H * IMG_W * IMG_C * BYTES_PER_CHANNEL);
         imgData.order(ByteOrder.nativeOrder());
+        outData = ByteBuffer.allocateDirect(IMG_H * IMG_W * CATEGORY_N * BYTES_PER_CHANNEL);
+        outData.order(ByteOrder.nativeOrder());
         long endTime = System.currentTimeMillis();
         Log.v(TAG, String.format("Created DeepLab Model of TFLite: %dms", endTime - startTime));
     }
@@ -104,17 +109,19 @@ public class DeepLab {
     public Boolean[][] getTVSegment() {
         long startTime = System.currentTimeMillis();
         Boolean[][] isTV = new Boolean[IMG_W][IMG_H];
-        for (int i = 0; i < IMG_W; i++) {
-            for (int j = 0; j < IMG_H; j++) {
+        for (int y = 0; y < IMG_H; y++) {
+            for (int x = 0; x < IMG_W; x++) {
                 float maxProb = 0;
                 int maxK = 0;
                 for (int k = 0; k < CATEGORY_N; k++) {
-                    if (segment[0][i][j][k] > maxProb) {
-                        maxProb = segment[0][i][j][k];
+                    float val = outData.getFloat(
+                            (y * IMG_W * CATEGORY_N + x * CATEGORY_N + k) * BYTES_PER_CHANNEL);
+                    if (val > maxProb) {
+                        maxProb = val;
                         maxK = k;
                     }
                 }
-                isTV[i][j] = (maxK == CATEGORY_TV);
+                isTV[x][y] = (maxK == CATEGORY_TV);
             }
         }
         long endTime = System.currentTimeMillis();
@@ -124,7 +131,7 @@ public class DeepLab {
 
     public void runInference() {
         long startTime = System.currentTimeMillis();
-        tflite.run(imgData, segment);
+        tflite.run(imgData, outData);
         long endTime = System.currentTimeMillis();
         Log.v(TAG, String.format("Inference Latency: %dms", endTime - startTime));
     }
