@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -24,7 +25,13 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.lang.ref.WeakReference;
+import java.nio.ByteBuffer;
+import com.facedetector.util.DeepLab;
+import com.facedetector.util.ImageFusion;
 
 /**
  * 检测图片中脸部的数量，同时检测至少27张脸
@@ -98,8 +105,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void openAlbum() {
-        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        startActivityForResult(intent, PICK_IMAGE_ALBUM);
+        String TAG="IMAGEFUSION: ";
+        String dir= Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+        String fn=dir+"IMG_20190702_2048521.jpg";
+        try {
+            byte[] origin,restruct;
+            FileInputStream fs=new FileInputStream(fn);
+            Bitmap bm= BitmapFactory.decodeStream(fs);
+            int bytes=bm.getByteCount();
+            ByteBuffer buffer=ByteBuffer.allocate(bytes);
+            origin=buffer.array();
+            fs.close();
+            fn=dir+"IMG_20190702_2048532.jpg";
+            File file=new File(fn);
+            if (file.exists()){
+                Log.i(TAG, "openAlbum: "+fn+" exists!");
+            }
+            fs=new FileInputStream(fn);
+            bm= BitmapFactory.decodeStream(fs);
+            bytes=bm.getByteCount();
+            buffer=ByteBuffer.allocate(bytes);
+            restruct=buffer.array();
+            fs.close();
+            DeepLab deepLab=new DeepLab(this,8);
+            Log.i(TAG, "openAlbum: origin length: "+restruct.length);
+            deepLab.setImageData(restruct);
+            deepLab.runInference();
+            Boolean[][] seg=deepLab.getTVSegment();
+            ImageFusion imageFusion=new ImageFusion(origin,restruct,seg);
+            imageFusion.fuseImg();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void showResult(final Bitmap bitmap) {

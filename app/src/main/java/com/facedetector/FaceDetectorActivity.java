@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.facedetector.util.ImageFusion;
 import com.facedetector.util.PPTCorrector;
 
 import org.opencv.android.BaseLoaderCallback;
@@ -451,8 +452,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     loadView.setVisibility(View.INVISIBLE);
                     previewView.setVisibility(View.INVISIBLE);
 
-                    PPTCorrector corrector=new PPTCorrector(images.get(0));
-                    corrector.correction(corrector.getOriginImg());
+                    picturehandler();
 
                     //保存图片
                     SavePictureTask saveTask = new SavePictureTask();
@@ -462,6 +462,23 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
             }
         });
+    }
+
+    private void picturehandler() {
+        PPTCorrector corrector=new PPTCorrector(images.get(0));
+        corrector.correction(corrector.getOriginImg());
+
+        try {
+            DeepLab deepLab=new DeepLab(this,8);
+            deepLab.setImageData(images.get(1));
+            deepLab.runInference();
+            Boolean[][] seg=deepLab.getTVSegment();
+            ImageFusion imageFusion=new ImageFusion(images.get(0),images.get(1),seg);
+            imageFusion.fuseImg();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     /****

@@ -59,6 +59,8 @@ public class DeepLab {
     public DeepLab(Activity activity, int numThreads) throws IOException {
         long startTime = System.currentTimeMillis();
         tfliteModel = loadModelFile(activity);
+        gpuDelegate=new GpuDelegate();
+        tfliteOptions.addDelegate(gpuDelegate);
         tfliteOptions.setNumThreads(numThreads);
         tflite = new Interpreter(tfliteModel, tfliteOptions);
         imgData = ByteBuffer.allocateDirect(IMG_H * IMG_W * IMG_C * BYTES_PER_CHANNEL);
