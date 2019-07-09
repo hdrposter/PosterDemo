@@ -161,11 +161,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         }
 
         // 载入 DeepLab
-        try {
-            deeplab = new DeepLab(this, 2);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        deeplab = new DeepLab(getAssets());
     }
 
 
@@ -763,9 +759,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         @Override
         protected Boolean[][] doInBackground(byte[]... bytes) {
             Log.v(TAG, "call DeepLab function");
-            deeplab.setImageData(bytes[0]);
-            deeplab.runInference();
-            return deeplab.getTVSegment();
+            return deeplab.getTVSegment(bytes[0]);
         }
 
         @Override
