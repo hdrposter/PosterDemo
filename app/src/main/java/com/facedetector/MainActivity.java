@@ -2,12 +2,13 @@ package com.facedetector;
 
 import android.Manifest;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -23,24 +24,10 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
-
-import com.facedetector.util.ImageFusion;
-
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.core.Scalar;
-import org.opencv.core.Size;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 检测图片中脸部的数量，同时检测至少27张脸
@@ -68,31 +55,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
-    public void onResume(){
-        super.onResume();
-        if (!OpenCVLoader.initDebug()){
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0,this,mLoadCallbake);
-        }else {
-            mLoadCallbake.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-        }
-    }
-
-    private BaseLoaderCallback mLoadCallbake =new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            super.onManagerConnected(status);
-            switch (status){
-                case LoaderCallbackInterface.SUCCESS:
-                    Log.d("MainActivety", "onManagerConnected: opencv-3.4.1 load success!");
-                    break;
-                default:{
-                    super.onManagerConnected(status);
-                }
-            }
-        }
-    };
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (faceHandler != null) {
@@ -104,8 +66,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void initViews() {
-        btnGallery = findViewById(R.id.btn_de_face_image);
-        btnGallery.setOnClickListener(this);
+        findViewById(R.id.albumbtn).setOnClickListener(this);
         findViewById(R.id.btn1).setOnClickListener(this);
         iv = findViewById(R.id.iv);
     }
@@ -132,73 +93,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn1:
                 FaceDetectorActivity.start(this);
                 break;
-            case R.id.btn_de_face_image:
-                TestTask testTask=new TestTask();
-                testTask.execute();
+           case R.id.albumbtn:
+               String path =  Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+               openAlbum(path);
                 break;
+
         }
     }
 
-    private void openAlbum() {
-        int width=1600;
-        int height=900;
-        Boolean[][]seg=new Boolean[257][257];
-        Mat origin;
-        Mat restruct;
-        String mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator+"seg.txt";
-        try {
-            BufferedReader br=new BufferedReader(new InputStreamReader(
-                    new FileInputStream(mPath)));
-            int rows=0;
-            for (String line=br.readLine();line!=null;line=br.readLine()){
-                line=line.replace("\n","");
-                String[] nums=line.split(" ");
-                for (int i=0;i<nums.length;i++){
-                    if (Double.valueOf(nums[i])==0.0){
-                        seg[rows][i]=false;
-                    }else if (Double.valueOf(nums[i])==1){
-                        seg[rows][i]=true;
-                    }
-                }
-                rows++;
-            }
-            origin=new Mat();
-            origin=Mat.ones(new Size(width,height), CvType.CV_8UC3);
-            Core.multiply(origin,new Scalar(255,255,2555),origin);
-            restruct=new Mat();
-            restruct=Mat.ones(new Size(width,height),CvType.CV_8UC3);
-            byte[] originImg=new byte[width*height*4];
-            byte[] restructImg=new byte[width*height*4];
-            Core.multiply(restruct,new Scalar(0,0,0),restruct);
-            Bitmap bm=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(restruct,bm);
-            ByteArrayOutputStream bs=new ByteArrayOutputStream();
-            bm.compress(Bitmap.CompressFormat.JPEG,100,bs);
-            originImg=bs.toByteArray();
-            bs.reset();
-            Utils.matToBitmap(origin,bm);
-            bm.compress(Bitmap.CompressFormat.JPEG,100,bs);
-            bm.recycle();
-            restructImg=bs.toByteArray();
-            bs.reset();
-            ImageFusion fusion=new ImageFusion(originImg,restructImg,seg);
-            fusion.fuseImg();
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-    private class TestTask extends AsyncTask<byte[],byte[],byte[]>{
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-        @Override
-        protected byte[] doInBackground(byte[]... params) {
-            Log.d("=======","background");
-            openAlbum();
-            return null;
-        }
+    private void openAlbum(String path) {
+        Intent intent = new Intent(this,AlbumActivity.class);
+
+        intent.putExtra("path",path);
+        startActivity(intent);
     }
 
     private void showResult(final Bitmap bitmap) {
@@ -276,5 +183,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
+
+
+
 
 }
