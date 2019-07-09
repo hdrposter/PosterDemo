@@ -9,36 +9,42 @@ import com.facedetector.FaceDetectorActivity;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opencv.android.Utils;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class DeepLabTest {
 
-    byte[] img;
-    DeepLab deepLab;
-    String TAG="DeepLab";
-    String mPath= Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+    Boolean[][] seg;
+    ImageFusion imageFusion;
+    String TAG="imageFusion";
+    Mat origin;
+    Mat restruct;
+    int width;
+    int height;
+    String mPath= Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator+"seg.txt";
 
     @Before
     public void before(){
-        try{
-            FileInputStream fs=new FileInputStream(mPath+"IMG_20190707_1551190.jpg");
-            Bitmap bm= BitmapFactory.decodeStream(fs);
-            int bytes=bm.getByteCount();
-            ByteBuffer buffer=ByteBuffer.allocate(bytes);
-            img=buffer.array();
-            deepLab=new DeepLab(new FaceDetectorActivity(),5);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
+
     }
 
     @Test
     public void setImageData() {
+
     }
 
     @Test
@@ -47,18 +53,6 @@ public class DeepLabTest {
 
     @Test
     public void runInference() {
-        try{
-            FileInputStream fs=new FileInputStream(mPath+"IMG_20190707_1551190.jpg");
-            Bitmap bm= BitmapFactory.decodeStream(fs);
-            int bytes=bm.getByteCount();
-            ByteBuffer buffer=ByteBuffer.allocate(bytes);
-            img=buffer.array();
-            deepLab=new DeepLab(new FaceDetectorActivity(),5);
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-        deepLab.setImageData(img);
-        deepLab.runInference();
-        Boolean[][] seg=deepLab.getTVSegment();
+        
     }
 }

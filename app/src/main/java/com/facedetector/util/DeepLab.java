@@ -24,7 +24,7 @@ public class DeepLab {
      * Settings
      **/
     private final String MODEL_PATH = "deeplabv3_257_mv_gpu.tflite";
-    private final boolean USE_GPU = false;
+    private final boolean USE_GPU = true;
     private final int IMG_H = 257;
     private final int IMG_W = 257;
     private final int IMG_C = 3;
@@ -62,8 +62,6 @@ public class DeepLab {
     public DeepLab(Activity activity, int numThreads) throws IOException {
         long startTime = System.currentTimeMillis();
         tfliteModel = loadModelFile(activity);
-        gpuDelegate=new GpuDelegate();
-        tfliteOptions.addDelegate(gpuDelegate);
         tfliteOptions.setNumThreads(numThreads);
         if (USE_GPU) {
             tfliteOptions.addDelegate(new GpuDelegate());

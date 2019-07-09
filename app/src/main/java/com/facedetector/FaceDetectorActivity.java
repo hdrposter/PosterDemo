@@ -470,7 +470,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
         try {
             DeepLab deepLab=new DeepLab(this,8);
-            deepLab.setImageData(images.get(1));
+            deepLab.setImageData(images.get(0));
             deepLab.runInference();
             Boolean[][] seg=deepLab.getTVSegment();
             ImageFusion imageFusion=new ImageFusion(images.get(0),images.get(1),seg);

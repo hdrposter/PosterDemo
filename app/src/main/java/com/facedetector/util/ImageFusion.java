@@ -42,30 +42,30 @@ public class ImageFusion {
     private Bitmap fusionImg;
 
     public ImageFusion(byte[] originImg,byte[] restructImg,Boolean[][] seg){
-
-        String s="";
-        for (int i=0;i<seg.length;i++){
-            for (int j=0;j<seg[i].length;j++){
-                if (seg[i][j]){
-                    s=s+"1 ";
-                }
-                else {
-                    s=s+"0 ";
-                }
-            }
-            s=s+"\n";
-        }
-        Log.i(TAG, "runInference: \n"+s);
+//
+//        String s="";
+//        for (int i=0;i<seg.length;i++){
+//            for (int j=0;j<seg[i].length;j++){
+//                if (seg[i][j]){
+//                    s=s+"1 ";
+//                }
+//                else {
+//                    s=s+"0 ";
+//                }
+//            }
+//            s=s+"\n";
+//        }
+//        Log.i(TAG, "runInference: \n"+s);
 
         this.originImg=new Mat();
         this.restructImg=new Mat();
         this.seg=seg;
-        this.fusionImg=null;
         originMatrix= Mat.zeros(new Size(IMG_WIDTH,IMG_HEIGHT),CvType.CV_8UC3);
 
         Bitmap origin= BitmapFactory.decodeByteArray(originImg,0,originImg.length);
         IMG_WIDTH=origin.getWidth();
         IMG_HEIGHT=origin.getHeight();
+        this.fusionImg=Bitmap.createBitmap(IMG_WIDTH,IMG_HEIGHT,Bitmap.Config.ARGB_8888);
         mPath= Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
         this.IMG_SIZE=new Size(IMG_WIDTH,IMG_HEIGHT);
         Utils.bitmapToMat(origin,this.originImg);
@@ -74,6 +74,7 @@ public class ImageFusion {
     }
 
     public Bitmap fuseImg(){
+        Log.i(TAG, "fuseImg: get into fusion!");
         List<Mat> weightMatrix=new ArrayList<>();
         weightMatrix=weighted_matrix();
         Mat resultImg=new Mat();
@@ -118,15 +119,19 @@ public class ImageFusion {
             Core.merge(rgb,originImg);
         }
         Core.split(restructImg,rgb);
-        if (rgb.size()==3){
+        if (rgb.size()==4){
             for (int i=0;i<rgb.size();i++) {
                 Core.multiply(rgb.get(i), weightMatrix.get(1), rgb.get(i));
             }
             Core.merge(rgb,restructImg);
         }
         Mat resultImg=new Mat();
-        Core.add(originImg,restructImg,restructImg);
-        return restructImg;
+        Core.add(originImg,restructImg,resultImg);
+        resultImg.convertTo(resultImg,CvType.CV_8UC4);
+        Bitmap bm=Bitmap.createBitmap(IMG_WIDTH,IMG_HEIGHT, Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(resultImg,bm);
+        bm.toString();
+        return resultImg;
     }
 
     private List<Mat> weighted_matrix(){
@@ -153,21 +158,23 @@ public class ImageFusion {
         }
         Size length=hull.size();
         List<Point> cornerPoint=new ArrayList<>();
-        for (int i=0;i<hull.cols();i++){
-            double[] index=hull.get(0,i);
+        for (int i=0;i<hull.rows();i++){
+            double[] index=hull.get(i,0);
             Point point=segPointList.get((int)index[0]);
             double x=point.x;
             double y=point.y;
-            x=x*IMG_HEIGHT/segSize.height;
-            y=y*IMG_WIDTH/segSize.width;
-            cornerPoint.add(new Point(x,y));
+//            x=x*IMG_HEIGHT/segSize.height;
+//            y=y*IMG_WIDTH/segSize.width;
+            cornerPoint.add(new Point(y,x));
             Log.i(TAG, "weighted_matrix: index: "+index);
         }
         Log.i(TAG, "weighted_matrix: length: "+length.toString());
         MatOfPoint cornerPointsMat=new MatOfPoint();
         cornerPointsMat.fromList(cornerPoint);
-        originMatrix=Mat.zeros(new Size(IMG_WIDTH,IMG_HEIGHT),CvType.CV_8UC3);
-        Imgproc.fillConvexPoly(originMatrix,cornerPointsMat,new Scalar(255.0));
+        originMatrix=Mat.zeros(new Size(257,257),CvType.CV_8U);
+
+        Imgproc.fillConvexPoly(originMatrix,cornerPointsMat,new Scalar(255,255,255));
+        Imgproc.resize(originMatrix,originMatrix,new Size(IMG_WIDTH,IMG_HEIGHT));
         Imgproc.GaussianBlur(originMatrix,originMatrix,new Size(101,71),30,30,4);
         Core.divide(255.0,originMatrix,originMatrix,CvType.CV_8U);
         Mat restructMatrix=new Mat();
