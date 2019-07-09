@@ -56,5 +56,4 @@ freeline/
 freeline_project_description.json
 
 # TensorFlow Model
-*.pb
 *.tflite
