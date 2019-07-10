@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.SensorManager;
 import android.os.AsyncTask;
+import android.content.res.AssetManager;
 import android.os.Environment;
 
 import java.io.ByteArrayOutputStream;
@@ -55,6 +56,7 @@ import com.facedetector.util.PPTCorrector;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.core.Mat;
 
 /**
  * <pre>
@@ -448,11 +450,12 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     loadView.setVisibility(View.INVISIBLE);
                     previewView.setVisibility(View.INVISIBLE);
 
-                    picturehandler();
+                    pptCorrectionTask pptCorrectionTask=new pptCorrectionTask();
+                    pptCorrectionTask.execute();
 
                     //保存图片
-                    SavePictureTask saveTask = new SavePictureTask();
-                    saveTask.execute();
+                    //SavePictureTask saveTask = new SavePictureTask();
+                    //saveTask.execute();
                     //saveFaceImages();
                 }
 
@@ -460,21 +463,25 @@ public class FaceDetectorActivity extends AppCompatActivity {
         });
     }
 
-    private void picturehandler() {
+    public List<Bitmap> picturehandler() {
+        List<Bitmap> imgs=new ArrayList<>();
+
         PPTCorrector corrector=new PPTCorrector(images.get(0));
-        corrector.correction(corrector.getOriginImg());
+        Bitmap ppt=corrector.correction(corrector.getOriginImg());
+        imgs.add(ppt);
 
         try {
-            DeepLab deepLab=new DeepLab(this,8);
-            deepLab.setImageData(images.get(0));
-            deepLab.runInference();
-            Boolean[][] seg=deepLab.getTVSegment();
+            AssetManager assetManager=this.getAssets();
+            DeepLab deepLab=new DeepLab(assetManager);
+            Boolean[][] seg=deepLab.getTVSegment(images.get(0));
             ImageFusion imageFusion=new ImageFusion(images.get(0),images.get(1),seg);
-            imageFusion.fuseImg();
+            Bitmap result=imageFusion.fuseImg();
+            imgs.add(result);
         }
         catch (Exception e){
             e.printStackTrace();
         }
+        return imgs;
     }
 
     /****
@@ -762,6 +769,23 @@ public class FaceDetectorActivity extends AppCompatActivity {
                         x++;
                 }
             }
+        }
+    }
+
+    private class pptCorrectionTask extends AsyncTask<byte[],byte[], List<Bitmap>>{
+        @Override
+        protected void onPreExecute(){
+            super.onPreExecute();
+        }
+
+        @Override
+        protected List<Bitmap> doInBackground(byte[]... bytes) {
+
+            return picturehandler();
+        }
+
+        @Override
+        protected void onPostExecute(List<Bitmap> imgs) {
         }
     }
 }
