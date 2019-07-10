@@ -49,7 +49,7 @@ public class PPTCorrector {
      * @param img origin image matrix
      * @return corrected ppt matrix
      */
-    public Mat correction(Mat img){
+    public Bitmap correction(Mat img){
         Log.d(TAG, "correction: get into correction");
         //convert to gray matrix
         Mat gray=new Mat();
@@ -113,7 +113,7 @@ public class PPTCorrector {
 //        for (int i=0;i<finalPoint.length;i++) {
 //            Log.d(TAG, "correction: points: x: " + finalPoint[i].x + " y: " + finalPoint[i].y + ",points number: " + finalPoint.length);
 //        }
-        return hierachy;
+        return correctedPPT;
     }
 
     private Mat threshBinary(Mat pptCorrectedMt) {

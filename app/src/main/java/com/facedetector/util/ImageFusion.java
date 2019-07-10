@@ -114,14 +114,18 @@ public class ImageFusion {
         Core.split(originImg,rgb);
         if (rgb.size()==3){
             for (int i=0;i<rgb.size();i++) {
+                rgb.get(i).convertTo(rgb.get(i),CvType.CV_32F);
                 Core.multiply(rgb.get(i), weightMatrix.get(0), rgb.get(i));
+                rgb.get(i).convertTo(rgb.get(i),CvType.CV_8U);
             }
             Core.merge(rgb,originImg);
         }
         Core.split(restructImg,rgb);
         if (rgb.size()==4){
             for (int i=0;i<rgb.size();i++) {
+                rgb.get(i).convertTo(rgb.get(i),CvType.CV_32F);
                 Core.multiply(rgb.get(i), weightMatrix.get(1), rgb.get(i));
+                rgb.get(i).convertTo(rgb.get(i),CvType.CV_8U);
             }
             Core.merge(rgb,restructImg);
         }
@@ -171,14 +175,13 @@ public class ImageFusion {
         Log.i(TAG, "weighted_matrix: length: "+length.toString());
         MatOfPoint cornerPointsMat=new MatOfPoint();
         cornerPointsMat.fromList(cornerPoint);
-        originMatrix=Mat.zeros(new Size(257,257),CvType.CV_8U);
+        originMatrix=Mat.zeros(new Size(257,257),CvType.CV_32F);
 
-        Imgproc.fillConvexPoly(originMatrix,cornerPointsMat,new Scalar(255,255,255));
+        Imgproc.fillConvexPoly(originMatrix,cornerPointsMat,new Scalar(1.0));
         Imgproc.resize(originMatrix,originMatrix,new Size(IMG_WIDTH,IMG_HEIGHT));
         Imgproc.GaussianBlur(originMatrix,originMatrix,new Size(101,71),30,30,4);
-        Core.divide(255.0,originMatrix,originMatrix,CvType.CV_8U);
         Mat restructMatrix=new Mat();
-        Core.absdiff(originMatrix,new Scalar(1),restructMatrix);
+        Core.absdiff(originMatrix,new Scalar(1.0),restructMatrix);
         List<Mat> matList=new ArrayList<>();
         matList.add(originMatrix);
         matList.add(restructMatrix);

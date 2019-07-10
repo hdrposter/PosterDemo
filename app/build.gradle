@@ -22,8 +22,6 @@ android {
     }
 }
 
-apply from:'download.gradle'
-
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile 'com.android.support:support-annotations:23.1.1'
@@ -34,7 +32,7 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     implementation 'com.squareup.okio:okio:1.14.0'
     implementation 'org.jetbrains:annotations-java5:15.0'
-    implementation project(path: ':openCVLibrary341')
     implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
     implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly'
+    implementation project(path: ':openCVLibrary341')
 }
