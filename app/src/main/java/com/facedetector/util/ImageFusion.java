@@ -73,18 +73,18 @@ public class ImageFusion {
         Utils.bitmapToMat(restruct,this.restructImg);
     }
 
-    public Bitmap fuseImg(){
+    public String fuseImg(){
         Log.i(TAG, "fuseImg: get into fusion!");
         List<Mat> weightMatrix=new ArrayList<>();
         weightMatrix=weighted_matrix();
         Mat resultImg=new Mat();
         resultImg=restructResult(originImg,restructImg,weightMatrix);
         Utils.matToBitmap(resultImg,fusionImg);
-        saveImg(fusionImg);
-        return fusionImg;
+        String path=saveImg(fusionImg);
+        return path;
     }
 
-    private void saveImg(Bitmap bm) {
+    private String saveImg(Bitmap bm) {
         String fileName=mPath;
         Log.d(TAG, "onClick: 存储文件夹："+mPath);
         File dir=new File(mPath);
@@ -107,6 +107,7 @@ public class ImageFusion {
         catch (Exception e){
             e.printStackTrace();
         }
+        return fileName;
     }
 
     private Mat restructResult(Mat originImg, Mat restructImg, List<Mat> weightMatrix) {
@@ -165,8 +166,8 @@ public class ImageFusion {
         for (int i=0;i<hull.rows();i++){
             double[] index=hull.get(i,0);
             Point point=segPointList.get((int)index[0]);
-            double x=point.x;
-            double y=point.y;
+            double y=point.x;
+            double x=point.y;
 //            x=x*IMG_HEIGHT/segSize.height;
 //            y=y*IMG_WIDTH/segSize.width;
             cornerPoint.add(new Point(y,x));
@@ -175,11 +176,15 @@ public class ImageFusion {
         Log.i(TAG, "weighted_matrix: length: "+length.toString());
         MatOfPoint cornerPointsMat=new MatOfPoint();
         cornerPointsMat.fromList(cornerPoint);
-        originMatrix=Mat.zeros(new Size(257,257),CvType.CV_32F);
+        originMatrix=Mat.zeros(new Size(seg.length,seg[0].length),CvType.CV_32F);
 
         Imgproc.fillConvexPoly(originMatrix,cornerPointsMat,new Scalar(1.0));
         Imgproc.resize(originMatrix,originMatrix,new Size(IMG_WIDTH,IMG_HEIGHT));
-        Imgproc.GaussianBlur(originMatrix,originMatrix,new Size(101,71),30,30,4);
+        Imgproc.GaussianBlur(originMatrix,originMatrix,new Size(301,221),30,30);
+//        originMatrix.convertTo(originMatrix,CvType.CV_8U);
+//        Bitmap bm=Bitmap.createBitmap(IMG_WIDTH,IMG_HEIGHT, Bitmap.Config.ARGB_8888);
+//        Utils.matToBitmap(originMatrix,bm);
+
         Mat restructMatrix=new Mat();
         Core.absdiff(originMatrix,new Scalar(1.0),restructMatrix);
         List<Mat> matList=new ArrayList<>();

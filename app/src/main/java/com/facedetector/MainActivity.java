@@ -5,6 +5,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -24,7 +25,16 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 
+import com.facedetector.util.DeepLab;
+import com.facedetector.util.ImageFusion;
+
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +65,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     @Override
+    public void onResume(){
+        super.onResume();
+        if (!OpenCVLoader.initDebug()){
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_4_0,this,mLoadCallbake);
+        }else {
+            mLoadCallbake.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }
+
+    private BaseLoaderCallback mLoadCallbake =new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            super.onManagerConnected(status);
+            switch (status){
+                case LoaderCallbackInterface.SUCCESS:
+                    Log.d("", "onManagerConnected: opencv-3.4.1 load success!");
+                    break;
+                default:{
+                    super.onManagerConnected(status);
+                }
+            }
+        }
+    };
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         if (faceHandler != null) {
@@ -68,6 +103,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initViews() {
         findViewById(R.id.albumbtn).setOnClickListener(this);
         findViewById(R.id.btn1).setOnClickListener(this);
+        findViewById(R.id.slidesbtn).setOnClickListener(this);
+//        findViewById(R.id.button).setOnClickListener(this);
         iv = findViewById(R.id.iv);
     }
 
@@ -93,13 +130,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn1:
                 FaceDetectorActivity.start(this);
                 break;
-           case R.id.albumbtn:
-               String path =  Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
-               openAlbum(path);
+            case R.id.albumbtn:
+                String path =  Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+                openAlbum(path);
                 break;
-
+            case R.id.slidesbtn:
+                System.out.println("slides btn clicked!");
+                path =  Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator+"PPT"+File.separator;
+                openAlbum(path);
+                break;
+//            case R.id.button:
+//                test();
         }
     }
+
+//    private void test() {
+//        String dir=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+//        String fn=dir+"IMG_20190702_2048521.jpg";
+//        try {
+//            FileInputStream fs=new FileInputStream(fn);
+//            Bitmap bm=BitmapFactory.decodeStream(fs);
+//            ByteArrayOutputStream bs=new ByteArrayOutputStream();
+//            bm.compress(Bitmap.CompressFormat.JPEG,100,bs);
+//            byte[] origin=bs.toByteArray();
+//
+//            fs.close();
+//            bm.recycle();
+//            bs.close();
+//
+//            fn=dir+"IMG_20190702_2048532.jpg";
+//            fs=new FileInputStream(fn);
+//            bm=BitmapFactory.decodeStream(fs);
+//            bs=new ByteArrayOutputStream();
+//            bm.compress(Bitmap.CompressFormat.JPEG,100,bs);
+//            byte[] restruct=bs.toByteArray();
+//
+//            AssetManager assetManager=this.getAssets();
+//            DeepLab deepLab=new DeepLab(assetManager);
+//            Boolean[][] seg=deepLab.getTVSegment(origin);
+//            ImageFusion imageFusion=new ImageFusion(origin,restruct,seg);
+//            imageFusion.fuseImg();
+//        }catch (Exception e){
+//            e.printStackTrace();
+//        }
+//    }
 
     private void openAlbum(String path) {
         Intent intent = new Intent(this,AlbumActivity.class);

@@ -13,6 +13,8 @@ import java.io.File;
 
 import okio.BufferedSink;
 import okio.Okio;
+
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.text.SimpleDateFormat;
 import android.content.Context;
@@ -77,7 +79,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private SurfaceView surfaceView;
     private ImageView previewView; //拍照瞬间遮罩视图
     private ProgressBar loadView; //Loading
-    private ImageView imageView; //拍照左下角缩略图
+    private ImageView imageView;//拍照左下角缩略图
+    private ImageView pptView;//ppt缩略图
     private FocusCircleView focusView; //对焦框
     private ActionView actionView; //拍照动画
     private ImageButton imageButton; //相机快门
@@ -88,7 +91,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
     private String iso;
     private String mPath;
     private String previewPath;
-    private boolean isTakingPic;
+    private String pptPath;
     private int currPic; //当前拍摄
 
     private ArrayList<byte[]> images; //按下快门后捕捉的照片
@@ -116,7 +119,6 @@ public class FaceDetectorActivity extends AppCompatActivity {
         setContentView(R.layout.activity_face);
         images=new ArrayList<>();
         imageDirections = new ArrayList<>();
-        isTakingPic=false;
         mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
         initViews();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -259,6 +261,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         previewView = (ImageView) this.findViewById(R.id.previewView);
         loadView = (ProgressBar) this.findViewById(R.id.progressBar2);
         imageView = (ImageView) this.findViewById(R.id.imageView);
+        pptView=(ImageView)this.findViewById(R.id.imageView2);
 
         focusView=new FocusCircleView(this);
         actionView = new ActionView(this);
@@ -303,6 +306,17 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
 
+            }
+        });
+
+        pptView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (pptPath!=null){
+                    Intent intent = new Intent(FaceDetectorActivity.this, PreviewActivity.class);
+                    intent.putExtra("path",pptPath);
+                    startActivity(intent);
+                }
             }
         });
     }
@@ -376,7 +390,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     //当前第一张，作为预览
                     if(currPic==0){
                         Bitmap bm = rotateImageBitmap(data,Direction.Up);
-                        setPreview(bm);
+//                        setPreview(bm);
                     }
 
                 }
@@ -428,7 +442,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
                     //当前第一张，作为预览
                     if(exposure ==minExposure){
                         Bitmap bm = rotateImageBitmap(data,Direction.Up);
-                        setPreview(bm);
+//                        setPreview(bm);
                     }
                     //Log.d(TAG, "onPictureTaken: 已添加 "+images.size()+" 张脸部图片");
                     /*while (images.size()>10){
@@ -462,11 +476,12 @@ public class FaceDetectorActivity extends AppCompatActivity {
         });
     }
 
-    public List<Bitmap> picturehandler() {
-        List<Bitmap> imgs=new ArrayList<>();
+    public List<String> picturehandler() {
+        List<String> imgs=new ArrayList<>();
 
         PPTCorrector corrector=new PPTCorrector(images.get(0));
-        Bitmap ppt=corrector.correction(corrector.getOriginImg());
+        String ppt=corrector.correction(corrector.getOriginImg());
+        pptPath=ppt;
         imgs.add(ppt);
 
         try {
@@ -474,7 +489,8 @@ public class FaceDetectorActivity extends AppCompatActivity {
             DeepLab deepLab=new DeepLab(assetManager);
             Boolean[][] seg=deepLab.getTVSegment(images.get(0));
             ImageFusion imageFusion=new ImageFusion(images.get(0),images.get(1),seg);
-            Bitmap result=imageFusion.fuseImg();
+            String result=imageFusion.fuseImg();
+            previewPath=result;
             imgs.add(result);
         }
         catch (Exception e){
@@ -606,11 +622,12 @@ public class FaceDetectorActivity extends AppCompatActivity {
     }
 
     //设置拍照瞬间预览
-    private void setPreview(Bitmap img){
+    private void setPreview(Bitmap[] img){
         focusView.setVisibility(View.INVISIBLE);
-        previewView.setVisibility(View.VISIBLE);
-        previewView.setImageBitmap(img);
-        imageView.setImageBitmap(img);
+//        previewView.setVisibility(View.VISIBLE);
+//        previewView.setImageBitmap(img[0]);
+        imageView.setImageBitmap(img[0]);
+        pptView.setImageBitmap(img[1]);
     }
 
     @Override
@@ -771,20 +788,31 @@ public class FaceDetectorActivity extends AppCompatActivity {
         }
     }
 
-    private class pptCorrectionTask extends AsyncTask<byte[],byte[], List<Bitmap>>{
+    private class pptCorrectionTask extends AsyncTask<byte[],byte[], List<String>>{
         @Override
         protected void onPreExecute(){
             super.onPreExecute();
         }
 
         @Override
-        protected List<Bitmap> doInBackground(byte[]... bytes) {
+        protected List<String > doInBackground(byte[]... bytes) {
 
             return picturehandler();
         }
 
         @Override
-        protected void onPostExecute(List<Bitmap> imgs) {
+        protected void onPostExecute(List<String> imgs) {
+            try {
+                FileInputStream fs=new FileInputStream(imgs.get(0));
+                Bitmap pptbmp=BitmapFactory.decodeStream(fs);
+                fs.close();
+                fs=new FileInputStream(imgs.get(1));
+                Bitmap fusedbmp=BitmapFactory.decodeStream(fs);
+                Bitmap[] bm={fusedbmp,pptbmp};
+                setPreview(bm);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 }
