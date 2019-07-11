@@ -37,6 +37,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
+import android.widget.Toast;
 import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -77,6 +78,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     //UI相关
     private SurfaceView surfaceView;
+    private Context context;
     private ImageView previewView; //拍照瞬间遮罩视图
     private ProgressBar loadView; //Loading
     private ImageView imageView;//拍照左下角缩略图
@@ -87,8 +89,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
 
     private Camera mCamera;
     private SurfaceHolder mHolder;
-    private int exposure;
-    private String iso;
+    boolean processing;
     private String mPath;
     private String previewPath;
     private String pptPath;
@@ -120,6 +121,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         images=new ArrayList<>();
         imageDirections = new ArrayList<>();
         mPath=Environment.getExternalStorageDirectory().getAbsolutePath()+ File.separator+"Poster_Camera"+File.separator;
+        context=this.getApplicationContext();
         initViews();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 
@@ -459,12 +461,23 @@ public class FaceDetectorActivity extends AppCompatActivity {
                 }else{//拍摄结束
                     parameters.setExposureCompensation(0); //恢复曝光补偿
                     mCamera.setParameters(parameters);
+                    Toast.makeText(context,"拍摄完成，处理中，请稍等...",Toast.LENGTH_LONG).show();
+                    List<String>imgs=picturehandler();
+                    try {
+                        FileInputStream fs=new FileInputStream(imgs.get(0));
+                        Bitmap pptbmp=BitmapFactory.decodeStream(fs);
+                        fs.close();
+                        fs=new FileInputStream(imgs.get(1));
+                        Bitmap fusedbmp=BitmapFactory.decodeStream(fs);
+                        Bitmap[] bm={fusedbmp,pptbmp};
+                        setPreview(bm);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     //关闭预览
                     loadView.setVisibility(View.INVISIBLE);
                     previewView.setVisibility(View.INVISIBLE);
 
-                    pptCorrectionTask pptCorrectionTask=new pptCorrectionTask();
-                    pptCorrectionTask.execute();
 
                     //保存图片
                     //SavePictureTask saveTask = new SavePictureTask();
@@ -484,6 +497,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
         pptPath=ppt;
         imgs.add(ppt);
 
+        Toast.makeText(this.getApplicationContext(),"PPT",Toast.LENGTH_LONG).show();
         try {
             AssetManager assetManager=this.getAssets();
             DeepLab deepLab=new DeepLab(assetManager);
@@ -813,6 +827,7 @@ public class FaceDetectorActivity extends AppCompatActivity {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+            processing=false;
         }
     }
 }
