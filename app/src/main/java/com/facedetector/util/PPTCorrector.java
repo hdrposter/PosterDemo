@@ -49,7 +49,7 @@ public class PPTCorrector {
      * @param img origin image matrix
      * @return corrected ppt matrix
      */
-    public String correction(Mat img){
+    public Bitmap correction(Mat img){
         Log.d(TAG, "correction: get into correction");
         //convert to gray matrix
         Mat gray=new Mat();
@@ -78,7 +78,7 @@ public class PPTCorrector {
          * find the points that make up a Poly with the biggest area
          * if the number of points are 4, it mean we find the ppt
          */
-        double maxArea=Imgproc.contourArea(cnts.get(0));
+        double maxArea=Imgproc.boundingRect(cnts.get(0)).area();
         int index=0;
         MatOfPoint2f approxCurve = new MatOfPoint2f();
         MatOfPoint2f matOfPoint2f=new MatOfPoint2f();
@@ -90,7 +90,7 @@ public class PPTCorrector {
             Imgproc.approxPolyDP(matOfPoint2f, approxCurve, 0.02*peri, true);
             tempPoints = approxCurve.toArray();
             if (tempPoints.length==4){
-                double tempArea= Imgproc.contourArea(cnts.get(i));
+                double tempArea= Imgproc.boundingRect(cnts.get(i)).area();
                 if (tempArea>maxArea){
                     maxArea=tempArea;
                     finalPoint=tempPoints;
@@ -109,11 +109,11 @@ public class PPTCorrector {
 
         correctedPPT=Bitmap.createBitmap(pptCorrectedMt.cols(),pptCorrectedMt.rows(),Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(pptCorrectedMt,correctedPPT);
-        String path=savePPT(correctedPPT);
+        savePPT(correctedPPT);
 //        for (int i=0;i<finalPoint.length;i++) {
 //            Log.d(TAG, "correction: points: x: " + finalPoint[i].x + " y: " + finalPoint[i].y + ",points number: " + finalPoint.length);
 //        }
-        return path;
+        return correctedPPT;
     }
 
     private Mat threshBinary(Mat pptCorrectedMt) {
@@ -173,7 +173,7 @@ public class PPTCorrector {
         return distance;
     }
 
-    private String savePPT(Bitmap bm){
+    private void savePPT(Bitmap bm){
         String fileName=mPath;
         Log.d(TAG, "onClick: 存储文件夹："+mPath);
         File dir=new File(mPath);
@@ -196,7 +196,6 @@ public class PPTCorrector {
         catch (Exception e){
             e.printStackTrace();
         }
-        return fileName;
     }
 
     public Mat getOriginImg(){
